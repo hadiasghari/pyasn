@@ -1,0 +1,69 @@
+TODO LIST FOR PYASN-2, 22-may-2014
+
+    !!! does it build and installa and run basic? on py2? py3? win? lin?
+    !!! decide on where to put helper methods/scripts >> partially module (pyasn-mrtx.py), partially put in SCRIPTS
+
+
+        
+*INITIAL/BASICS*
+    - UPDATE GITIGNORE!!
+    
+    - [hadi:] initial test on binary save + asnames 
+    - [hadi:] test helper scripts (get, convert, etc) on py2+py3
+
+	- fix the DOCS, and the easy TODOs in the code, and namings of things in the different files!
+    
+	- UNIT TESTS: run tests once??
+        http://pythontesting.net/
+        http://pytest.org/latest/goodpractises.html
+
+	- decide if license is good MIT (was BSD? is that compatible now?)
+            add my own, (who is Michael J. Schultz? Damien Miller? Todd.Miller@courtesan.com?)
+        
+    
+- finalize package structure
+        >> update LICENSES (incl at start of source files)           
+        >> other todo items in setup.py 
+        >> FINALIZE README -- including markup perhaps (see pyradix on pypi)?
+        >> sample IPASNDB - where to put?        
+
+- upload to GITHUB >> on google code page, redirect here
+
+
+
+
+** ADVANCED/MORE **         
+       
+PACKAGING     
+ - test build on various envs: 
+        >> windows w/ 2.7, 3.4...   + VS 2010 (or free version of it)
+        >> windows w/ above + cygwin/miniconda
+        >> ubuntu 2.7, ubuntu 3.4
+        >> redhat 2.6, 3.3
+        
+- upload package to pypi (change gcode to link to it)
+    https://pythonhosted.org/setuptools/setuptools.html      
+    
+- upload more IPASNDAT examples              to GITHUB
+ 
+
+TESTING 
+    - complete simple tests 
+    - test all the space w/ previous pyasn / online sites like teamcymru/shadowserver
+	e.g.: https://stat.ripe.net/data/prefix-overview/data.json?max_related=50&resource=131.180.77.102
+
+
+CODE 
+    - complete the as-names functionality & test it (icnl where to get the data, fastest way to retreive it, etc)
+    -ipv6 (probably to be added to mrt converter, and tested w/ rest)
+    - Performance >> memory usage still a bit high?
+        
+        
+FUTURE WORK
+    >> webservice version (e.g. flask) => might be interesting if very simple; might be redoing RIPESTATS!
+    >> wiered extensions: call the RIPEstat JSON
+    >> class pyasn_cacher: can be here, with logic to nnot reload the file if already in memory unless we run out of memory :)
+	if we want/arman wants!
+    >> could add RIPE DATA-API WRAPPER objects !
+	>> r&d: have a look into maxmind's libarary source and if they have radix, etc
+      

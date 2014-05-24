@@ -1,0 +1,7 @@
+include LICENSE
+include LICENSE_pyradix_orig
+include README.md
+include pyasn/_radix/*
+include pyasn/_radixplus_wrapper.c
+include pyasn/__init__.py
+include pyasn-helper/*.py

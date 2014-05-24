@@ -1,0 +1,11 @@
+[nosetests]
+verbosity = 2
+detailed-errors = 1
+with-coverage = 1
+cover-package = radix
+
+[egg_info]
+tag_build = 
+tag_date = 0
+tag_svn_revision = 0
+
