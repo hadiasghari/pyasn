@@ -112,7 +112,10 @@ Supports IPv4 & IPv6"""
         names = "has as-names" if self._asnames else "no as-names"
         return "pyasn object. ipasndb: '%s' (%d prefixes; %s)" % (self._dbfilename, self._records, names)                
     
-                     
+    
+    # todo: add two static converter methods to convert ASX.X format into 32bit ASN and vice-versa
+
+    
    # PERSISTENCE support, use with pickle.dump(), pickle.load()
    # todo: test  persistence support with pickle.dump. also need to persist/reload ASNAMES & the two _records & _dbfilename, if not done automatically
     def __iter__(self):

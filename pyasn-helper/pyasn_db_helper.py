@@ -73,6 +73,8 @@ def convert_asnamelist_to_b64blob(filein, fileout):
     f = open(filein, encoding='utf-8') 
     for s in f:
         asn, asname = s[:-1].split(maxsplit=1)
+        if asname == '-Reserved AS-':
+            continue
         asn = int(asn[2:]) if '.' not in asn else int(asn[2:asn.find('.')])*65536 +  int(asn[asn.find('.')+1:]) 
         asnames[asn] = asname
     f.close()    

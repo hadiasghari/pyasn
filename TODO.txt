@@ -1,9 +1,23 @@
 TODO LIST FOR PYASN-2, 22-may-2014
 
     !!! does it build and installa and run basic? on py2? py3? win? lin?
+        YES: builds on lin/py2 + win/py3. 
+        warnings in linux which should be fixed:
+        pyasn/_radix/radix.c:276:13: warning: pointer targets in passing argument 2 of ‘comp_with_mask’ differ in signedness [-Wpointer-sign]             
+
+            
+    
     !!! decide on where to put helper methods/scripts >> partially module (pyasn-mrtx.py), partially put in SCRIPTS
+        > NOT COPIED NOW. ONLY COPIES THIS FOR NOW:
+                    /usr/local/lib/python2.7/dist-packages/pyasn-1.5-py2.7-linux-x86_64.egg
 
 
+    !! WRAPPER: error: the pyasn module doesn't load if "import radix" is run before it because of the name conflict
+    
+    git: change last comment! and remove +X from files
+    
+    
+    
         
 *INITIAL/BASICS*
     - UPDATE GITIGNORE!!

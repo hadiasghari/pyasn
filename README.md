@@ -25,6 +25,7 @@ TODO: add following text:
 - project was born out of research conducted at the Economics of Cybersecurity group at Delft University of Technology. (2010-2014)
 - Python 2 & 3 supported    
 - IPv4 & IPv6 & 32-bit ASN support. (note: IPv6  not fully tested)
+
     
 
 
@@ -50,6 +51,11 @@ sudo apt-get install python-dev build-essential
     
 Tests are in the ``tests/`` directory and can be run with
 ``python setup.py tests``.
+
+
+To uninstall the old PyASN, delete the following files from your Python installation: 
+    PYTHONDIR/dist-packages/PyASN.so
+    PYTHONDIR/dist-packages/PyASN-1.2.egg-info
 
 
 Usage
