@@ -20,11 +20,9 @@ class LoadRadixPickle(TestCase):
 
     
     def _check_8888(self):
-        asn = self.ipdb.lookup_asn('8.8.8.8')
+        asn, prefix = self.ipdb.lookup('8.8.8.8')
         self.assertEqual(asn, 15169)
-        asn,prefix = self.ipdb.lookup_asn_prefix('8.8.8.8')
-        self.assertEqual(asn, 15169) 
-        self.assertEqual(asn, '8.8.8.0/24')
+        self.assertEqual(prefix, '8.8.8.0/24')
         
     
     def _check_tud(self):
@@ -35,10 +33,10 @@ class LoadRadixPickle(TestCase):
         pass # check the key cases where the IP maps to several prefixes, and most specific is important
         
     def _check_emtpy_and_bad(self):
-       asn = self.ipdb.lookup_asn('230.2.2.2')
+       asn, prefix = self.ipdb.lookup('230.2.2.2')
        self.assertEqual(asn, None)
-       # self.assertTrue
-       self.ipdb.lookup_asn('300.3.4.4') # todo: check that it raises expcetion
+       self.assertEqual(prefix, None)
+       self.ipdb.lookup_asn('300.3.4.4')  # todo: check that it raises expcetion
         
 
     def _check_ipv6(self):

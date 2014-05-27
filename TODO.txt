@@ -1,9 +1,5 @@
 TODO LIST FOR PYASN-2, 22-may-2014
 
-    !!! does it build and installa and run basic? on py2? py3? win? lin?
-        YES: builds on lin/py2 + win/py3. 
-        warnings in linux which should be fixed:
-        pyasn/_radix/radix.c:276:13: warning: pointer targets in passing argument 2 of ‘comp_with_mask’ differ in signedness [-Wpointer-sign]             
 
 
     !!! decide on where to put helper methods/scripts >> partially module (pyasn-mrtx.py), partially put in SCRIPTS
@@ -14,31 +10,31 @@ TODO LIST FOR PYASN-2, 22-may-2014
 
     - test basic things work
         -builds on platforms
+                        YES: builds on lin/py2 + win/py3.
         -basic methods work correctly :-)
+        - [to test: binary format load given changes]
+        - [to test: helper scripts, given changes)
+
     - unit tests?
-    - test as-names file (and wher eto read it from?!)
-    -
-    - IPv6 -- later -- main issue is the MRT formats reader
-    -
-
-    
-        
-*INITIAL/BASICS*
-    - [hadi:] initial test on binary save + asnames
-    - [hadi:] test helper scripts (get, convert, etc) on py2+py3
-
-	- fix the DOCS, and the easy TODOs in the code, and namings of things in the different files!
-    
-	- UNIT TESTS: run tests once??
         http://pythontesting.net/
         http://pytest.org/latest/goodpractises.html
 
-	- decide if license is good MIT (was BSD? is that compatible now?)
-            add my own, (who is Michael J. Schultz? Damien Miller? Todd.Miller@courtesan.com?)
-        
+    - test as-names file/load (and where to get sources from?!) (what format is fastest?)
+    - IPv6 -- later -- main issue is the MRT formats reader
+    - packaging
+        - helper scripts ought to install
+        - docstrings and everything else is neat, unit tests run
+        - then upload
+        - decide if license MIT is good (was BSD? is that compatible now?)... and add necessary updates [see below]
+
+
+    
+
+
     
 - finalize package structure
-        >> update LICENSES (incl at start of source files)           
+        >> update LICENSES (incl at start of source files)
+                        add my own, (who is Michael J. Schultz? Damien Miller? Todd.Miller@courtesan.com?)
         >> other todo items in setup.py 
         >> FINALIZE README -- including markup perhaps (see pyradix on pypi)?
         >> sample IPASNDB - where to put?        
@@ -48,7 +44,7 @@ TODO LIST FOR PYASN-2, 22-may-2014
 
 
 
-** ADVANCED/MORE **         
+** MORE **
        
 PACKAGING     
  - test build on various envs: 
@@ -69,7 +65,8 @@ TESTING
 	e.g.: https://stat.ripe.net/data/prefix-overview/data.json?max_related=50&resource=131.180.77.102
 
 
-CODE 
+CODE
+	- fix the DOCS, and the easy TODOs in the code, and namings of things in the different files!
     - complete the as-names functionality & test it (icnl where to get the data, fastest way to retreive it, etc)
     -ipv6 (probably to be added to mrt converter, and tested w/ rest)
     - Performance >> memory usage still a bit high?
