@@ -1057,7 +1057,7 @@ PyMODINIT_FUNC PyInit_pyasn_radix(void)
         return module_initialize();
 }
 #else
-PyMODINIT_FUNC init_radix(void)
+PyMODINIT_FUNC initpyasn_radix(void)
 {
         module_initialize();
 }
