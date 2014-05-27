@@ -17,8 +17,8 @@ class pyasn(object):
         Creates a new instance of pyasn\n
         ip_asn_db_file
             Filename of the IP-ASN-database to load
-            The database can be a simple text file with lines of "NETWORK/BITS\ASN"
-            You can create the database files using pyasn-helper scripts from BGP-MRT-dumps.
+            The database can be a simple text file with lines of "NETWORK/BITS\tASN"
+            You can create database files using pyasn-helper scripts from BGP-MRT-dumps.
             Or download prebuilt database files from pyasn homepage.
         as_names_file
             if given, loads autonomous system names from this file (slower)
