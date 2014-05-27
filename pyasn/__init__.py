@@ -1,7 +1,8 @@
 # TODO: ADD COPYRIGHT + LICENSE / EXPLANATIONS WITH LINKS TO ORIG PROJECTS
-from ._radix import Radix as _Radix
+from .pyasn_radix import Radix
 import pickle
 import zlib
+import base64
 
 #"""TODO: The docstring for a module should generally list the classes, exceptions and functions 
 #(and any other objects) that are exported by the module, with a one-line summary of each. """
@@ -28,19 +29,19 @@ skip_names = set to False to load autonomous system names if present in db (slow
 It can also be binary for faster loading, and contain AS-Names.
 You can create the database files using pyasn-helper scripts from BGP-MRT-dumps.
 Or download pre-made IPASNDB files from pyasn homepage."""          
-        self.radix = _Radix()
+        self.radix = Radix()
         # note: this class uses functionality provided by the underlying RADIX class (implemented in C for speed); 
         #       actions such as add and delete nodes can be run on the underlying radix tree if required; that's why we expose "radix"
         self._dbfilename = ipasndb
         self._binary = binary
         self._records = self.radix.load_ipasndb(ipasndb, binary=binary)
-        self._asnames = _read_asnames(self) if not skip_names else None
+        self._asnames = self._read_asnames() if not skip_names else None
     #
     
     def _read_asnames(self):
         """read autonomous system names, if present from both the text and  binary db formats"""
         asnames = None 
-        f = file(self.ipasndb, "rb" if self.binary else "rt")  # codec, if required for text, should be ASCII/LATIN
+        f = open(self.ipasndb, "rb" if self.binary else "rt")  # codec, if required for text, should be ASCII/LATIN
         if not self.binary:        
             # in the text file, asnames is stored as the dumped version of asnames dictionary; it is compressed for efficency, and stored in BASE64
             # to maintain compatibility with older pyasn, the lines are prepended with (;), and the whole section starts/ends with asnames' so load_ipasndb can skip it

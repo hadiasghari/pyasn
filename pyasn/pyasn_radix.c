@@ -150,7 +150,7 @@ static PyTypeObject RadixNode_Type = {
         /* The ob_type field must be initialized in the module init function
          * to be portable to Windows without using C++. */
         PyVarObject_HEAD_INIT(NULL, 0)
-        "_radix.RadixNode",      /*tp_name*/
+        "pyasn_radix.RadixNode",      /*tp_name*/
         sizeof(RadixNodeObject),/*tp_basicsize*/
         0,                      /*tp_itemsize*/
         /* methods */
@@ -731,7 +731,7 @@ static PyTypeObject Radix_Type = {
         /* The ob_type field must be initialized in the module init function
          * to be portable to Windows without using C++. */
         PyVarObject_HEAD_INIT(NULL, 0)
-        "_radix.Radix",          /*tp_name*/
+        "pyasn_radix.Radix",          /*tp_name*/
         sizeof(RadixObject),    /*tp_basicsize*/
         0,                      /*tp_itemsize*/
         /* methods */
@@ -868,7 +868,7 @@ static PyTypeObject RadixIter_Type = {
         /* The ob_type field must be initialized in the module init function
          * to be portable to Windows without using C++. */
         PyVarObject_HEAD_INIT(NULL, 0)
-        "_radix.RadixIter",      /*tp_name*/
+        "pyasn_radix.RadixIter",      /*tp_name*/
         sizeof(RadixIterObject),/*tp_basicsize*/
         0,                      /*tp_itemsize*/
         /* methods */
@@ -1017,7 +1017,7 @@ PyDoc_STRVAR(module_doc,
 #if PY_MAJOR_VERSION >= 3
 static struct PyModuleDef radix_module_def = {
     PyModuleDef_HEAD_INIT,
-    "_radix",
+    "pyasn_radix",
     module_doc,
     -1,
     radix_methods,                         // methods
@@ -1039,7 +1039,7 @@ static PyObject *module_initialize(void)
 #if PY_MAJOR_VERSION >= 3
         m = PyModule_Create(&radix_module_def);
 #else
-        m = Py_InitModule3("_radix", radix_methods, module_doc);
+        m = Py_InitModule3("pyasn_radix", radix_methods, module_doc);
 #endif
 
         /* Stash the callable constructor for use in Radix.__reduce__ */
@@ -1052,7 +1052,7 @@ static PyObject *module_initialize(void)
 }
 
 #if PY_MAJOR_VERSION >= 3
-PyMODINIT_FUNC PyInit__radix(void)
+PyMODINIT_FUNC PyInit_pyasn_radix(void)
 {
         return module_initialize();
 }

@@ -20,8 +20,8 @@ with codecs.open(join(here, 'README.md'), encoding='utf-8') as f:
 extra_kwargs = {}
 if not IS_PYPY: 
     libs = ['Ws2_32'] if platform.system() == "Windows" else []
-    ext = Extension('pyasn._radix',
-                      sources=['pyasn/_radix.c', 'pyasn/_radix/radix.c'],
+    ext = Extension('pyasn.pyasn_radix',
+                      sources=['pyasn/pyasn_radix.c', 'pyasn/_radix/radix.c'],
                       include_dirs=[join(here, 'pyasn')],
                       libraries=libs)
     extra_kwargs['ext_modules'] = [ext]
