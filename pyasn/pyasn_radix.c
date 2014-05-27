@@ -699,7 +699,8 @@ Radix_load_ipasndb(RadixObject *self, PyObject *args, PyObject *kw_args)
 
 
 parse_or_memory_error:           
-    sprintf(err_msg, "Error while parsing/adding IPASN database (mode: %s, record: %d)!", (binary ? "binary" : "text"), n + 1);  // could use err_msg_i, if set
+    sprintf(err_msg, "Error while parsing/adding IPASN database (mode: %s, record: %d)!", (binary ? "binary" : "text"), (int)(n+1));
+    // could also add err_msg_i, if set
     PyErr_SetString(PyExc_RuntimeError, err_msg);  
     // TODO/perhaps: clear or reset tree before returning from error
     fclose(ccfd);
