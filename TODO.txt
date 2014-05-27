@@ -5,24 +5,26 @@ TODO LIST FOR PYASN-2, 22-may-2014
         warnings in linux which should be fixed:
         pyasn/_radix/radix.c:276:13: warning: pointer targets in passing argument 2 of ‘comp_with_mask’ differ in signedness [-Wpointer-sign]             
 
-            
-    
+
     !!! decide on where to put helper methods/scripts >> partially module (pyasn-mrtx.py), partially put in SCRIPTS
         > NOT COPIED NOW. ONLY COPIES THIS FOR NOW:
                     /usr/local/lib/python2.7/dist-packages/pyasn-1.5-py2.7-linux-x86_64.egg
 
 
-    !! WRAPPER: error: the pyasn module doesn't load if "import radix" is run before it because of the name conflict
-    
-    git: change last comment! and remove +X from files
-    
-    
+
+    - test basic things work
+        -builds on platforms
+        -basic methods work correctly :-)
+    - unit tests?
+    - test as-names file (and wher eto read it from?!)
+    -
+    - IPv6 -- later -- main issue is the MRT formats reader
+    -
+
     
         
 *INITIAL/BASICS*
-    - UPDATE GITIGNORE!!
-    
-    - [hadi:] initial test on binary save + asnames 
+    - [hadi:] initial test on binary save + asnames
     - [hadi:] test helper scripts (get, convert, etc) on py2+py3
 
 	- fix the DOCS, and the easy TODOs in the code, and namings of things in the different files!
