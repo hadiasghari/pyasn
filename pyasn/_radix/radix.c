@@ -85,7 +85,7 @@
  */
 
 static int
-comp_with_mask(u_char *addr, u_char *dest, u_int mask)
+comp_with_mask(u_char* addr, u_char* dest, u_int mask)
 {
         if (memcmp(addr, dest, mask / 8) == 0) {
                 u_int n = mask / 8;
@@ -272,8 +272,8 @@ radix_node_t
         if (node->bit > bitlen || node->prefix == NULL)
                 return (NULL);
 
-        if (comp_with_mask(prefix_tochar(node->prefix),
-            prefix_tochar(prefix), bitlen))
+        if (comp_with_mask((u_char*) prefix_tochar(node->prefix),
+            (u_char*) prefix_tochar(prefix), bitlen))
                 return (node);
 
         return (NULL);
@@ -318,8 +318,8 @@ static radix_node_t
 
         while (--cnt >= 0) {
                 node = stack[cnt];
-                if (comp_with_mask(prefix_tochar(node->prefix),
-                    prefix_tochar(prefix), node->prefix->bitlen) &&
+                if (comp_with_mask((u_char*) prefix_tochar(node->prefix),
+                        (u_char*) prefix_tochar(prefix), node->prefix->bitlen) &&
                     node->prefix->bitlen <= bitlen)
                         return (node);
         }
