@@ -3,6 +3,7 @@
 from unittest import TestCase
 from os.path import dirname, realpath, join
 import pyasn
+import os
 
 
 # test - TODO:
@@ -15,7 +16,7 @@ import pyasn
 
 class LoadRadixPickle(TestCase):
     def setUp(self):
-        self.ipdb = pyasn.pyasn('ipasn_20140513.dat')
+        self.ipdb = pyasn.pyasn(os.path.join('resources", "ipasn_20140513.dat'))
         # self.data_dir = join(dirname(realpath(__file__)), 'data')
 
     
