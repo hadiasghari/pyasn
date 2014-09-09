@@ -55,8 +55,8 @@ setup(
     ],
     
     # TODO: DECIDE WHETHER TO USE NOSE OR OTHERS; ALSO ADD OURS
-    #setup_requires=['nose', 'coverage'],
+    setup_requires=['nose'],
     packages=find_packages(exclude=['tests', 'tests.*']),
-    #test_suite='nose.collector', 
+    test_suite='nose.collector',
     **extra_kwargs
 )

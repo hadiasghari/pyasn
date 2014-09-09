@@ -1,4 +1,3 @@
-from tests.utilities import functions
 
 __author__ = 'arman'
 
@@ -7,10 +6,11 @@ import pickle
 import os
 
 from ipaddress import IPv4Address
-import tests.resources.resources as RES
+from utilities import functions
+import resources.resources as RES
 
 
-def create_ip_to_asn_mapping(date=RES.IPASN_DB_DATE):
+def generate_cymru_whois_ip_to_asn_mapping(date=RES.IPASN_DB_DATE):
     mapping = {}
     for count in range(1000):
         i1 = random.randint(1, 255)
@@ -22,8 +22,9 @@ def create_ip_to_asn_mapping(date=RES.IPASN_DB_DATE):
         asn = functions.as_loopkup_teamcymru(ip.compressed, date)
         mapping[ip.compressed] = asn
 
-    with open(os.path.join(RES.TEST_RESOURCES_PATH, "cymru.static.map"), "wb") as f:
+    with open(os.path.join(RES.TEST_RESOURCES_PATH, "cymru.mapping.pickle"), "wb") as f:
         pickle.dump(mapping, f)
 
 
-create_ip_to_asn_mapping()
+
+generate_cymru_whois_ip_to_asn_mapping()
