@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-
+from __future__ import print_function
 import codecs
 import sys
 import os
@@ -11,18 +11,19 @@ from os.path import abspath, dirname, join
 here = abspath(dirname(__file__))
 
 # determine the python version
-IS_PYPY = hasattr(sys, 'pypy_version_info') # todo: what is this?
+IS_PYPY = hasattr(sys, 'pypy_version_info')  # todo: what is this?
+print("IS_PYPY: %d" % IS_PYPY)
 
 with codecs.open(join(here, 'README.md'), encoding='utf-8') as f:
     README = f.read() 
 
-# introduce some extra setup_args if Python 2.x
+# introduce some extra setup_args if Python 2.x  # ???
 extra_kwargs = {}
 if not IS_PYPY: 
-    libs = ['Ws2_32'] if platform.system() == "Windows" else []
+    libs = ['Ws2_32'] if platform.system() == "Windows" else []  # contains getnameinfo()...
     ext = Extension('pyasn.pyasn_radix',
-                      sources=['pyasn/pyasn_radix.c', 'pyasn/_radix/radix.c'],
-                      include_dirs=[join(here, 'pyasn')],
+                      sources=['source/pyasn_radix.c', 'source/_radix/radix.c'],
+                      include_dirs=[join(here, 'source')],
                       libraries=libs)
     extra_kwargs['ext_modules'] = [ext]
 
@@ -44,14 +45,11 @@ setup(
         'Intended Audience :: Developers',
         'Topic :: Software Development :: Libraries :: Python Modules',
         'Topic :: System :: Networking',
-        'License :: OSI Approved :: MIT License', # todo: double check. was BSD, made into MIT
+        'License :: OSI Approved :: MIT License', 
+        'Operating System :: OS Independent',
+        'Programming Language :: Python',
         'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.6',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.2',
-        'Programming Language :: Python :: 3.3',
-        'Programming Language :: Python :: 3.4', # todo: added by HA, check ??
     ],
     
     # TODO: DECIDE WHETHER TO USE NOSE OR OTHERS; ALSO ADD OURS

@@ -562,7 +562,8 @@ sanitise_mask(u_char *addr, u_int masklen, u_int maskbits)
 }
 
 prefix_t
-*prefix_pton(const char *string, long len, const char **errmsg, prefix_t *prefix)     // HA : added input prefix_t to make sharing object possible;
+*prefix_pton(const char *string, long len, const char **errmsg, prefix_t *prefix)     
+// HA : added input prefix_t to make sharing object possible;
 {
         char save[256], *cp, *ep;
         struct addrinfo hints, *ai;
@@ -674,11 +675,58 @@ const char *
 prefix_ntop(prefix_t *prefix, char *buf, size_t len)
 {
         char addrbuf[128];
-
         if (prefix_addr_ntop(prefix, addrbuf, sizeof(addrbuf)) == NULL)
                 return (NULL);
         snprintf(buf, len, "%s/%d", addrbuf, prefix->bitlen);
-
         return (buf);
 }
 	
+
+#ifdef _WIN32 
+// In Windows, this isn't normally included (depending on libraries and version, it might be, or it might not). 
+// For ease, we just declare it again
+
+#ifndef _MSC_VER
+const char *inet_ntop(int af, const void *src, char *dst, size_t cnt) 
+#else
+// on VS2010, this is already defined with slightly different modifiers
+PCSTR WSAAPI inet_ntop(INT af, PVOID src, PSTR dst, size_t cnt)
+#endif
+{ 
+        if (af == AF_INET) 
+        { 
+                struct sockaddr_in in; 
+                memset(&in, 0, sizeof(in)); 
+                in.sin_family = AF_INET; 
+                memcpy(&in.sin_addr, src, sizeof(struct in_addr)); 
+                getnameinfo((struct sockaddr *)&in, sizeof(struct sockaddr_in), dst, cnt, NULL, 0, NI_NUMERICHOST); 
+                return dst; 
+        } 
+        else if (af == AF_INET6) 
+        { 
+                struct sockaddr_in6 in; 
+                memset(&in, 0, sizeof(in)); 
+                in.sin6_family = AF_INET6; 
+                memcpy(&in.sin6_addr, src, sizeof(struct in_addr6)); 
+                getnameinfo((struct sockaddr *)&in, sizeof(struct sockaddr_in6), dst, cnt, NULL, 0, NI_NUMERICHOST); 
+                return dst; 
+        } 
+        return NULL; 
+}        
+
+// TODO: another sample, if the above doesn't work. remove if OK.
+/*const char* inet_ntop(int af, const void* src, char* dst, size_t cnt)
+{ 
+    struct sockaddr_in srcaddr;
+    memset(&srcaddr, 0, sizeof(struct sockaddr_in));
+    memcpy(&(srcaddr.sin_addr), src, sizeof(srcaddr.sin_addr));
+    srcaddr.sin_family = af;
+    if (WSAAddressToString((struct sockaddr*) &srcaddr, sizeof(struct sockaddr_in), 0, dst, (LPDWORD) &cnt) != 0) {
+        int rv = WSAGetLastError();
+        printf("WSAAddressToString() : %d\n", rv);
+        return NULL;
+    }
+    return dst;
+} */
+
+#endif 

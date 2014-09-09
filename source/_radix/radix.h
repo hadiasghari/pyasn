@@ -60,25 +60,32 @@
 #ifndef _RADIX_H
 #define _RADIX_H
 
-#if defined(_MSC_VER)
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#else
-# include <sys/types.h>
-# include <sys/socket.h>
-# include <netinet/in.h>
-# include <arpa/inet.h>
-# include <netdb.h>
-#endif
 
-#if defined(_MSC_VER)
-# define snprintf _snprintf
+#if defined __MINGW32__ || defined _MSC_VER
+
+#include <winsock2.h>
+#include <ws2tcpip.h>  // required for IPv6 definitions
+#define snprintf _snprintf
 typedef unsigned __int8         u_int8_t;
 typedef unsigned __int16        u_int16_t;
 typedef unsigned __int32        u_int32_t;
-//const char *inet_ntop(int af, const void *src, char *dst, size_t size); // HA unnecessary, at least with VS2010
 size_t strlcpy(char *dst, const char *src, size_t size);
+
+#ifndef _MSC_VER
+// following is needed in Windows; on VS2010 already defined 
+const char *inet_ntop(int af, const void *src, char *dst, size_t size);  
 #endif
+
+#else
+
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+
+#endif
+
 
 /*
  * Originally from MRT include/mrt.h
