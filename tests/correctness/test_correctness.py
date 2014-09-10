@@ -1,9 +1,8 @@
-#!/usr/bin/env python
 __author__ = 'arman'
 
 from unittest import TestCase
 
-import resources.resources as RES
+import tests.resources.resources as RES
 import pyasn
 import pickle
 import functools

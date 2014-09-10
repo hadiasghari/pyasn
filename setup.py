@@ -33,7 +33,7 @@ extra_kwargs['ext_modules'] = [ext]
     # TODO: update README; double check keywords, etc below
     
 setup(
-    name='pyasn',  
+    name='pyasn',
     version='1.5',
     maintainer='Hadi Asghari', 
     maintainer_email='hd.asghari@gmail.com',
@@ -51,8 +51,7 @@ setup(
         'Programming Language :: Python',
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 3',
-    ],
-    
+    ],    
     tests_require=['nose'],
     packages=find_packages(exclude=['tests', 'tests.*']),
     test_suite='nose.collector',

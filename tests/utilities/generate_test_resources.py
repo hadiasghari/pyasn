@@ -6,8 +6,8 @@ import pickle
 import os
 
 from ipaddress import IPv4Address
-from utilities import functions
-import resources.resources as RES
+from tests.utilities import functions
+import tests.resources.resources as RES
 
 
 def generate_cymru_whois_ip_to_asn_mapping(date=RES.IPASN_DB_DATE):

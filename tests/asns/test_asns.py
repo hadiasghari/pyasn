@@ -16,6 +16,7 @@ import os
 
 class LoadRadixPickle(TestCase):
     def setUp(self):
+        print('ameye hadi')
         self.ipdb = pyasn.pyasn(os.path.join('resources", "ipasn_20140513.dat'))
         # self.data_dir = join(dirname(realpath(__file__)), 'data')
 
