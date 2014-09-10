@@ -12,20 +12,21 @@ here = abspath(dirname(__file__))
 
 # determine the python version
 IS_PYPY = hasattr(sys, 'pypy_version_info')  # todo: what is this?
-print("IS_PYPY: %d" % IS_PYPY)
+assert not IS_PYPY  # not sure what this does, temp
+
 
 with codecs.open(join(here, 'README.md'), encoding='utf-8') as f:
     README = f.read() 
 
 # introduce some extra setup_args if Python 2.x  # ???
+
 extra_kwargs = {}
-if not IS_PYPY: 
-    libs = ['Ws2_32'] if platform.system() == "Windows" else []  # contains getnameinfo()...
-    ext = Extension('pyasn.pyasn_radix',
-                      sources=['source/pyasn_radix.c', 'source/_radix/radix.c'],
-                      include_dirs=[join(here, 'source')],
-                      libraries=libs)
-    extra_kwargs['ext_modules'] = [ext]
+libs = ['Ws2_32'] if platform.system() == "Windows" else []  # contains getnameinfo()...
+ext = Extension('pyasn.pyasn_radix',
+              sources=['source/pyasn_radix.c', 'source/_radix/radix.c'],
+              include_dirs=[join(here, 'source')],
+              libraries=libs)
+extra_kwargs['ext_modules'] = [ext]
 
 
     # todo: states: zip_safe flag not set; analyzing archive contents...
@@ -52,8 +53,7 @@ setup(
         'Programming Language :: Python :: 3',
     ],
     
-    # TODO: DECIDE WHETHER TO USE NOSE OR OTHERS; ALSO ADD OURS
-    setup_requires=['nose'],
+    tests_require=['nose'],
     packages=find_packages(exclude=['tests', 'tests.*']),
     test_suite='nose.collector',
     **extra_kwargs
