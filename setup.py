@@ -32,7 +32,7 @@ if not IS_PYPY:
     # TODO: update README; double check keywords, etc below
     
 setup(
-    name='pyasn',  
+    name='pyasn',
     version='1.5',
     maintainer='Hadi Asghari', 
     maintainer_email='hd.asghari@gmail.com',
@@ -53,7 +53,7 @@ setup(
     ],
     
     # TODO: DECIDE WHETHER TO USE NOSE OR OTHERS; ALSO ADD OURS
-    setup_requires=['nose'],
+    tests_requires=['nose'],
     packages=find_packages(exclude=['tests', 'tests.*']),
     test_suite='nose.collector',
     **extra_kwargs
