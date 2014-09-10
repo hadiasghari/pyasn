@@ -1,6 +1,6 @@
 __author__ = 'arman'
 
-from utilities.functions import *
+from tests.utilities.functions import ipdb_date
 
 TEST_RESOURCES_PATH = os.path.dirname(__file__)
 IPASN_DB_PATH = os.path.join(os.path.dirname(__file__), "ipasn_20140513.dat")
