@@ -1,11 +1,27 @@
 #!/usr/bin/python
 
-# MRT RIB log import  [to convert to a text IP-ASN lookup table]
-# Author hadi asghari (hd dot asghari at gmail) of TUDelft.nl
-# v1.0 on 25-nov-2009, v1.1 on 02-dec-2009
-# v1.2 on 23-jan-2012 - add 32bit asn support
-# v1.5 on 24-may-2014; python 3 support, and updated imports
+# Copyright (c) 2009-2014 Hadi Asghari
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
 
+
+# MRT RIB log import  [to convert to a text IP-ASN lookup table]
 # file to use per day should be of these series:
 # http://archive.routeviews.org/bgpdata/2009.11/RIBS/rib.20091125.0600.bz2
 
