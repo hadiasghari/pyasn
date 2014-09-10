@@ -31,7 +31,7 @@ def as_loopkup_teamcymru(ip, date):
     datetime_string = date.strftime("%Y-%m-%d %H:%M:%S GMT")
     result = subprocess.check_output(["whois",  '-h', ('%s' % 'whois.cymru.com'), ' -f %s %s' % (ip, datetime_string)])
     result = result.decode().split("|")[0].strip()
-    return result
+    return result if result != "NA" else None
 
 
 def generate_cymru_whois_ip_to_asn_mapping(s_date):
@@ -49,9 +49,10 @@ def generate_cymru_whois_ip_to_asn_mapping(s_date):
 
     with open("cymru.map", "w") as f:
         print("saving output to: %s" % f.name)
+        f.write("#Mapping based on %s" % date)
         f.write("{\n")
         for ip in mapping:
-            f.write("%s : %s, \n" % (ip, mapping[ip]))
+            f.write("'%s' : %s, \n" % (ip, mapping[ip]))
         f.write("}")
 
 

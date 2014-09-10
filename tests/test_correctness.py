@@ -40,7 +40,7 @@ class TestCorrectness(TestCase):
             the static mapping provided in test resources.
         """
         with open(STATIC_WHOIS_MAPPING_PATH, "r") as f:
-            static_mapping = eval(functools.reduce(lambda x, y: x+y, f.readlines()))
+            static_mapping = eval("".join(f.readlines()))
             self.assrtTrue(len(static_mapping) > 0,
                            msg="Failed to Load RESOURCE.static.map! Resource was not found or was empty.")
             for ip in static_mapping:
