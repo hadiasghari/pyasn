@@ -21,6 +21,7 @@
 # Parts of this code are copied/based on the dpkt project
 # (https://code.google.com/p/dpkt/)
 
+from __future__ import print_function, division
 import struct
 
 """pyasn_mrtx: module to parse MRT/RIB BGP table dumps (in order to convert them IPASN database
@@ -374,8 +375,8 @@ class MRT_Attribute:
                 
         class ASPathSegment32:
             # AS_Path types we use:  
-            AS_SET          = 1     # shouldn't have to copy these globals in both classes
-            AS_SEQUENCE     = 2
+            AS_SET = 1     # shouldn't have to copy these globals in both classes
+            AS_SEQUENCE = 2
             
             def __init__(self, buf, is32):
                 self.type, self.len = struct.unpack('>BB', buf[:2])
@@ -410,6 +411,3 @@ class MRT_Attribute:
 
             def __repr__(self):
                 return str(self)
-                
-                
-                

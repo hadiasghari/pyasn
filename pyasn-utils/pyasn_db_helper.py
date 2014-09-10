@@ -21,6 +21,7 @@
 # TODO: COMPLETE / convert to script / test final version on both py3 & 2 (for the bytestring/unicode stuff)
 # todo: perhaps some of the other python files would also be better combinet with this
 
+from __future__ import print_function, division
 import socket, struct
 import pickle, zlib
 import time

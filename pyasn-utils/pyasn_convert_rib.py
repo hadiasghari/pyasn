@@ -25,7 +25,7 @@
 # file to use per day should be of these series:
 # http://archive.routeviews.org/bgpdata/2009.11/RIBS/rib.20091125.0600.bz2
 
-from __future__ import print_function
+from __future__ import print_function, division
 import bz2, time, sys, sys, os, glob
 from datetime import datetime, timedelta
 import pyasn_mrtx  
