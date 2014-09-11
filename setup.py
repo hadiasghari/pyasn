@@ -43,7 +43,7 @@ setup(
     data_files={'pyasn_data': ['data/*.dat']},
     scripts={},
     setup_requires=[],
-    tests_require=['nose'],
+    tests_require=['nose', 'coverage'],
     packages=find_packages(exclude=['tests', 'tests.*']),
     test_suite='nose.collector',
     **extra_kwargs

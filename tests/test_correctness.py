@@ -24,42 +24,92 @@ import pyasn
 import functools
 import os
 
+FAKE_IPASN_DB_PATH = os.path.join(os.path.dirname(__file__), "../data/ipasn.fake")
 IPASN_DB_PATH = os.path.join(os.path.dirname(__file__), "../data/ipasn_20140513.dat")
 STATIC_WHOIS_MAPPING_PATH = os.path.join(os.path.dirname(__file__), "../data/cymru.map")
-STATIC_OLD_PYASN_MAPPING_PATH = os.path.join(os.path.dirname(__file__), "../data/old_pyasn.map")
+STATIC_OLD_PYASN_MAPPING_PATH = os.path.join(os.path.dirname(__file__), "../data/pyasn_v1.2.map")
 
 
 class TestCorrectness(TestCase):
 
-    def setUp(self):
-        self.asndb = pyasn.pyasn(IPASN_DB_PATH)
+    asndb = pyasn.pyasn(IPASN_DB_PATH)
+    asndb_fake = pyasn.pyasn(FAKE_IPASN_DB_PATH)
 
-    def _check_static_map(self):
+    def test_consistency(self):
         """
-            Checks if the current pyasn returns the same AS number as
-            the static mapping provided in test resources.
+            Checks if pyasn is consistently loaded and that it returns a consistent answer
+        """
+        db = pyasn.pyasn(IPASN_DB_PATH)
+        asn, prefix = db.lookup('8.8.8.8')
+        for i in range(100):
+            tmp_asn, tmp_prefix = self.asndb.lookup('8.8.8.8')
+            self.assertEqual(asn, tmp_asn)
+            self.assertEqual(prefix, tmp_prefix)
+
+    def test_correctness(self):
+        """
+            Checks if pyasn returns the correct AS number
+        """
+        for i in range(4):
+            asn, prefix = self.asndb_fake.lookup("1.0.0.%d" % i)
+            self.assertEqual(1, asn)
+            self.assertEqual("1.0.0.0/30", prefix)
+        for i in range(4, 256):
+            asn, prefix = self.asndb_fake.lookup("1.0.0.%d" % i)
+            self.assertEqual(2, asn)
+            self.assertEqual("1.0.0.0/24", prefix)
+        for i in range(256):
+            asn, prefix = self.asndb_fake.lookup("2.0.0.%d" % i)
+            self.assertEqual(3, asn)
+            self.assertEqual("2.0.0.0/24", prefix)
+        for i in range(128, 256):
+            asn, prefix = self.asndb_fake.lookup("3.%d.0.0" % i)
+            self.assertEqual(4, asn)
+            self.assertEqual("3.0.0.0/8", prefix)
+        for i in range(0, 128):
+            asn, prefix = self.asndb_fake.lookup("3.%d.0.0" % i)
+            self.assertEqual(5, asn)
+            self.assertEqual("3.0.0.0/9", prefix)
+
+        asn, prefix = self.asndb_fake.lookup("5.0.0.0")
+        self.assertEqual(None, asn)
+        self.assertEqual(None, prefix)
+
+
+    def test_static_map(self):
+        """
+            Checks if the current pyasn returns closely similar ASNs as a static lookups saved from whois lookups.
         """
         with open(STATIC_WHOIS_MAPPING_PATH, "r") as f:
             static_mapping = eval("".join(f.readlines()))
-            self.assrtTrue(len(static_mapping) > 0,
+            self.assertTrue(len(static_mapping) > 0,
                            msg="Failed to Load RESOURCE.static.map! Resource was not found or was empty.")
-            for ip in static_mapping:
-                pyasn = self.asndb.lookup_asn(ip)
-                teamcymru_asn = static_mapping[ip]
-                self.assertEqual(pyasn, teamcymru_asn)
+            # For test output consistency we sort the order in which we check the ips
+            difference_count = 0
+            for ip in sorted(static_mapping.keys()):
+                pyasn_value, prefix = self.asndb.lookup(ip)
+                teamcymru_asn_value = static_mapping[ip]
+                if pyasn_value != teamcymru_asn_value:
+                    difference_count += 1
+                self.assertLess(difference_count, 100,  msg="Failed for IP %s" % ip)
 
-    def _check_compatibility(self):
+    def test_compatibility(self):
         """
             Checks if pyasn returns the same AS number as the old version of pyasn.
         """
         with open(STATIC_OLD_PYASN_MAPPING_PATH, "r") as f:
             static_mapping = eval(functools.reduce(lambda x, y: x+y, f.readlines()))
-            self.assrtTrue(len(static_mapping) > 0,
+            self.assertTrue(len(static_mapping) > 0,
                            msg="Failed to Load RESOURCE.static.map! Resource was not found or was empty.")
-            for ip in static_mapping:
-                pyasn = self.asndb.lookup_asn(ip)
-                old_pyasn = static_mapping[ip]
-                self.assertEqual(pyasn, old_pyasn)
+            # For test output consistency we sort the order in which we check the ips
+            difference_count = 0
+            for ip in sorted(static_mapping.keys()):
+                pyasn_value, prefix = self.asndb.lookup(ip)
+                old_pyasn_value = static_mapping[ip]
+                if pyasn_value != old_pyasn_value:
+                    print("AS Lookup inconsistent for %s new_pyaan = %s old_pyasn = %s" % (ip, pyasn_value, old_pyasn_value))
+                    difference_count += 1
+                self.assertLess(difference_count, 1, msg="Too Many failures!")
 
 
 # whois -h whois.cymru.com " -f 216.90.108.31 2005-12-25 13:23:01 GMT"

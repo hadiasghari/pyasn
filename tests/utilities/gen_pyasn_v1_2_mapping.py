@@ -39,8 +39,8 @@ def generate_old_PyASN_ip_to_asn_mapping(pyasn_db):
         ip = "%d.%d.%d.%d" % (i1, i2, i3, i4)
         mapping[ip] = asndb.Lookup(ip)
 
-    with open("old_pyasn.map", "w") as f:
-        f.write("#Mapping based on <%s> data file" % pyasn_db)
+    with open("pyasn_v1.2.map", "w") as f:
+        f.write("#Mapping based on <%s> data file\n" % pyasn_db)
         f.write("{\n")
         for ip in mapping:
             f.write("'%s' : %s, \n" % (ip, mapping[ip]))
