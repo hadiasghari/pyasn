@@ -51,7 +51,7 @@ class TestCorrectness(TestCase):
                 teamcymru_asn_value = static_mapping[ip]
                 if pyasn_value != teamcymru_asn_value:
                     difference_count += 1
-                self.assert_(difference_count < 100,  msg="Failed for IP %s" % ip)
+                self.assertTrue(difference_count < 100,  msg="Failed for IP %s" % ip)
 
     def test_compatibility(self):
         """
@@ -63,7 +63,7 @@ class TestCorrectness(TestCase):
         self.assertTrue(len(static_mapping) > 0, msg="Failed to Load RESOURCE.static.map! Resource was not found or was empty.")
         logger.debug("Mapping file loaded.")
         same_count, difference_count = (0, 0)
-        for nip in sorted(static_mapping.keys()): #For test output consistency we sort the order in which we check the ips
+        for nip in sorted(static_mapping.keys()):  # For test consistency we sort the order in which we check the ips
             sip = inet_ntoa(pack('>I', nip))
             pyasn_value, prefix = self.asndb.lookup(sip)
             old_pyasn_value = static_mapping[nip]

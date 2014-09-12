@@ -35,7 +35,6 @@ logger = logging.getLogger()
 
 
 class TestPyASNAggresive(TestCase):
-    asndb = pyasn.pyasn(IPASN_DB_PATH)
 
     def test_all_ipasn_dbs(self):
         """
@@ -46,8 +45,9 @@ class TestPyASNAggresive(TestCase):
             import PyASN
             assert version == 2
         except:
-            logger.info("Skipping this test because not python version 2 or no pyasn v1.2 present")
+            print("Skipping this test because not python version 2 or no pyasn v1.2 present ...", file=sys.stderr, end=' ')
             return
+
 
         random.seed(3283476)
         dbs = glob(IPASN_DB_PATH + "ipasn_2014*.dat")
