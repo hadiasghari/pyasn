@@ -22,35 +22,49 @@
     IMPORTANT: This script has to be run using python 2.
     Because the old PyASN is not python 3 compatible
 """
+import sys
+version = sys.version_info.major
+try:
+    assert version == 2
+except Exception:
+    print("This script must be run using python version 2!")
+    print("Make sure that PyASN v1.2 is installed as well.")
+    exit()
+
 import PyASN
 import random
 from sys import argv, exit
+from struct import pack, unpack
+from socket import inet_aton, inet_ntoa
+import cPickle as pickle
+import gzip
+import os
 
 
-def generate_old_PyASN_ip_to_asn_mapping(pyasn_db):
+def generate_pyasn_v1_2_ip_to_asn_mapping(pyasn_db, size):
     mapping = {}
     asndb = PyASN.new(pyasn_db)
-    for count in range(10000):
+    filename = os.path.basename(pyasn_db).split('.')[0]
+    size = int(size)
+    while len(mapping) < size:
         i1 = random.randint(1, 223)
         i2 = random.randint(0, 255)
         i3 = random.randint(0, 255)
         i4 = random.randint(0, 255)
 
-        ip = "%d.%d.%d.%d" % (i1, i2, i3, i4)
-        mapping[ip] = asndb.Lookup(ip)
+        sip = "%d.%d.%d.%d" % (i1, i2, i3, i4)
+        ip = unpack('>I', inet_aton(sip))[0]  # for efficient, store ip as 32-bit-int
+        mapping[ip] = asndb.Lookup(sip)
 
-    with open("pyasn_v1.2.map", "w") as f:
-        f.write("#Mapping based on <%s> data file\n" % pyasn_db)
-        f.write("{\n")
-        for ip in mapping:
-            f.write("'%s' : %s, \n" % (ip, mapping[ip]))
-        f.write("}")
+    f = gzip.open("pyasn_v1.2__%s__sample_%d.pickle.gz" % (filename, size), "wb")
+    pickle.dump(mapping, f)
+    f.close()
 
 
-if len(argv) != 2:
-    print("Usage: python generate_old_pyasn_mapping.py <PYASN_DB_FILE>")
+if len(argv) != 3:
+    print("Usage: python generate_old_pyasn_mapping.py <PYASN_DB_FILE> <number_records_to_generate>")
     print("       generates a static list of random IPs to AS mappings based on PyASN-1.2")
     print("       The output file can be copied to the data folder to be used by the unit tests.")
     exit()
 
-generate_old_PyASN_ip_to_asn_mapping(argv[1])
+generate_pyasn_v1_2_ip_to_asn_mapping(argv[1], argv[2])
