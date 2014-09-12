@@ -44,16 +44,15 @@ class TestPyASNAggresive(TestCase):
             print("Skipping this test because not python version 2 or no pyasn v1.2 present ...", file=sys.stderr, end=' ')
             return
 
-
-        random.seed(3283476)
         dbs = glob(IPASN_DB_PATH + "ipasn_2014*.dat")
         print("", file=sys.stderr)
         for db in sorted(dbs):
+            random.seed(db)  # for reproducibility
             print("comparing %s" % db, file=sys.stderr)
             newdb = pyasn.pyasn(db)
             olddb = PyASN.new(db)
 
-            for i in range(100000):
+            for i in range(500000):
                 i1 = random.randint(1, 223)
                 i2 = random.randint(0, 255)
                 i3 = random.randint(0, 255)
@@ -62,6 +61,6 @@ class TestPyASNAggresive(TestCase):
                 sip = "%d.%d.%d.%d" % (i1, i2, i3, i4)
                 newas, prefix = newdb.lookup(sip)
                 oldas = olddb.Lookup(sip)
-                self.assertEqual(oldas, newas,  msg="Failed for IP %s" % sip)
+                self.assertEqual(oldas, newas, msg="Failed for IP %s" % sip)
 
 
