@@ -47,8 +47,9 @@ class TestPyASNAggresive(TestCase):
 
         random.seed(3283476)
         dbs = glob(IPASN_DB_PATH + "ipasn_2014*.dat")
+        print("", file=sys.stderr)
         for db in sorted(dbs):
-            logger.info("comparing %s" % db)
+            print("comparing %s" % db, file=sys.stderr)
             newdb = pyasn.pyasn(db)
             olddb = PyASN.new(db)
 
