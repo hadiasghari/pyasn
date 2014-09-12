@@ -17,66 +17,24 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+
 import gzip
 import pickle
-
 from unittest import TestCase
 import pyasn
 import os
-from struct import pack, unpack
-from socket import inet_aton, inet_ntoa
+from struct import pack
+from socket import inet_ntoa
 import logging
 
-FAKE_IPASN_DB_PATH = os.path.join(os.path.dirname(__file__), "../data/ipasn.fake")
 IPASN_DB_PATH = os.path.join(os.path.dirname(__file__), "../data/ipasn_20140513.dat")
 STATIC_WHOIS_MAPPING_PATH = os.path.join(os.path.dirname(__file__), "../data/cymru.map")
 STATIC_OLD_PYASN_MAPPING_PATH = os.path.join(os.path.dirname(__file__), "../data/pyasn_v1.2__ipasn_20140513__sample_10000.pickle.gz")
 logger = logging.getLogger()
 
+
 class TestCorrectness(TestCase):
-
     asndb = pyasn.pyasn(IPASN_DB_PATH)
-    asndb_fake = pyasn.pyasn(FAKE_IPASN_DB_PATH)
-
-    def test_consistency(self):
-        """
-            Checks if pyasn is consistently loaded and that it returns a consistent answer
-        """
-        db = pyasn.pyasn(IPASN_DB_PATH)
-        asn, prefix = db.lookup('8.8.8.8')
-        for i in range(100):
-            tmp_asn, tmp_prefix = self.asndb.lookup('8.8.8.8')
-            self.assertEqual(asn, tmp_asn)
-            self.assertEqual(prefix, tmp_prefix)
-
-    def test_correctness(self):
-        """
-            Checks if pyasn returns the correct AS number
-        """
-        for i in range(4):
-            asn, prefix = self.asndb_fake.lookup("1.0.0.%d" % i)
-            self.assertEqual(1, asn)
-            self.assertEqual("1.0.0.0/30", prefix)
-        for i in range(4, 256):
-            asn, prefix = self.asndb_fake.lookup("1.0.0.%d" % i)
-            self.assertEqual(2, asn)
-            self.assertEqual("1.0.0.0/24", prefix)
-        for i in range(256):
-            asn, prefix = self.asndb_fake.lookup("2.0.0.%d" % i)
-            self.assertEqual(3, asn)
-            self.assertEqual("2.0.0.0/24", prefix)
-        for i in range(128, 256):
-            asn, prefix = self.asndb_fake.lookup("3.%d.0.0" % i)
-            self.assertEqual(4, asn)
-            self.assertEqual("3.0.0.0/8", prefix)
-        for i in range(0, 128):
-            asn, prefix = self.asndb_fake.lookup("3.%d.0.0" % i)
-            self.assertEqual(5, asn)
-            self.assertEqual("3.0.0.0/9", prefix)
-
-        asn, prefix = self.asndb_fake.lookup("5.0.0.0")
-        self.assertEqual(None, asn)
-        self.assertEqual(None, prefix)
 
     def test_static_map(self):
         """
