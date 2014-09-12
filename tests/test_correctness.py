@@ -99,23 +99,24 @@ class TestCorrectness(TestCase):
         """
             Checks if pyasn returns the same AS number as the old version of pyasn.
         """
-        with gzip.open(STATIC_OLD_PYASN_MAPPING_PATH, "rb") as f:
-            logger.debug("Loading mapping file ...")
-            static_mapping = pickle.load(f)
-            self.assertTrue(len(static_mapping) > 0, msg="Failed to Load RESOURCE.static.map! Resource was not found or was empty.")
-            logger.debug("Mapping file loaded.")
-            same_count, difference_count = (0, 0)
-            for nip in sorted(static_mapping.keys()): #For test output consistency we sort the order in which we check the ips
-                sip = inet_ntoa(pack('>I', nip))
-                pyasn_value, prefix = self.asndb.lookup(sip)
-                old_pyasn_value = static_mapping[nip]
-                if pyasn_value != old_pyasn_value:
-                    logger.debug("AS Lookup inconsistent for %s current_pyasn = %s pyasn-v1.2 = %s" % (sip, pyasn_value, old_pyasn_value))
-                    difference_count += 1
-                else:
-                    same_count += 1
-                self.assertLess(difference_count, 1, msg="Too Many failures!")
-            logger.info("same: %d, diff: %d" % (same_count, difference_count))
+        f = gzip.open(STATIC_OLD_PYASN_MAPPING_PATH, "rb")
+        logger.debug("Loading mapping file ...")
+        static_mapping = pickle.load(f)
+        self.assertTrue(len(static_mapping) > 0, msg="Failed to Load RESOURCE.static.map! Resource was not found or was empty.")
+        logger.debug("Mapping file loaded.")
+        same_count, difference_count = (0, 0)
+        for nip in sorted(static_mapping.keys()): #For test output consistency we sort the order in which we check the ips
+            sip = inet_ntoa(pack('>I', nip))
+            pyasn_value, prefix = self.asndb.lookup(sip)
+            old_pyasn_value = static_mapping[nip]
+            if pyasn_value != old_pyasn_value:
+                logger.debug("AS Lookup inconsistent for %s current_pyasn = %s pyasn-v1.2 = %s" % (sip, pyasn_value, old_pyasn_value))
+                difference_count += 1
+            else:
+                same_count += 1
+            self.assertLess(difference_count, 1, msg="Too Many failures!")
+        logger.info("same: %d, diff: %d" % (same_count, difference_count))
+        f.close()
 
 # whois -h whois.cymru.com " -f 216.90.108.31 2005-12-25 13:23:01 GMT"
 
