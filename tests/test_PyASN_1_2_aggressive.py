@@ -1,4 +1,3 @@
-__author__ = 'arman'
 # Copyright (c) 2009-2014 Hadi Asghari
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -19,12 +18,9 @@ __author__ = 'arman'
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import gzip
-import pickle
+from __future__ import print_function
 from unittest import TestCase
 import pyasn
-from struct import pack
-from socket import inet_ntoa
 import logging
 import sys
 from glob import glob
@@ -40,7 +36,7 @@ class TestPyASNAggresive(TestCase):
         """
             Checks compatibility of PyASN 1.2 results with current pyasn for all 2014 ipasn dbs .
         """
-        version = sys.version_info.major
+        version = sys.version_info[0]
         try:
             import PyASN
             assert version == 2

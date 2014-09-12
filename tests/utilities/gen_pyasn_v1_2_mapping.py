@@ -23,7 +23,7 @@
     Because the old PyASN is not python 3 compatible
 """
 import sys
-version = sys.version_info.major
+version = sys.version_info[0]
 try:
     assert version == 2
 except Exception:
