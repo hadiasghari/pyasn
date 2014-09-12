@@ -93,7 +93,7 @@ class TestCorrectness(TestCase):
                 teamcymru_asn_value = static_mapping[ip]
                 if pyasn_value != teamcymru_asn_value:
                     difference_count += 1
-                self.assertLess(difference_count, 100,  msg="Failed for IP %s" % ip)
+                self.assert_(difference_count < 100,  msg="Failed for IP %s" % ip)
 
     def test_compatibility(self):
         """
@@ -114,7 +114,7 @@ class TestCorrectness(TestCase):
                 difference_count += 1
             else:
                 same_count += 1
-            self.assertLess(difference_count, 1, msg="Too Many failures!")
+            self.assertEqual(difference_count, 0, msg="Too Many failures!")
         logger.info("same: %d, diff: %d" % (same_count, difference_count))
         f.close()
 
