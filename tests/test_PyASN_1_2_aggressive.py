@@ -41,7 +41,7 @@ class TestPyASNAggresive(TestCase):
             import PyASN
             assert version == 2
         except:
-            print("Skipping this test because not python version 2 or no pyasn v1.2 present ...", file=sys.stderr, end=' ')
+            print("Skipping test because not Python-2, or PyASN 1.2 not present ...", file=sys.stderr, end=' ')
             return
 
         dbs = glob(IPASN_DB_PATH + "ipasn_2014*.dat")

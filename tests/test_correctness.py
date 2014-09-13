@@ -26,6 +26,7 @@ import os
 from struct import pack
 from socket import inet_ntoa
 import logging
+from sys import stderr
 
 IPASN_DB_PATH = os.path.join(os.path.dirname(__file__), "../data/ipasn_20140513.dat")
 STATIC_WHOIS_MAPPING_PATH = os.path.join(os.path.dirname(__file__), "../data/cymru.map")
@@ -44,14 +45,15 @@ class TestCorrectness(TestCase):
             static_mapping = eval(f.read())
             self.assertTrue(len(static_mapping) > 0,
                            msg="Failed to Load RESOURCE.static.map! Resource was not found or was empty.")
-            # For test output consistency we sort the order in which we check the ips
+            # For test output consistency we sort the order in which we check the ips            
             difference_count = 0
             for ip in sorted(static_mapping.keys()):
-                pyasn_value, prefix = self.asndb.lookup(ip)
-                teamcymru_asn_value = static_mapping[ip]
-                if pyasn_value != teamcymru_asn_value:
+                a, prefix = self.asndb.lookup(ip)
+                b = static_mapping[ip]
+                if a != b:
                     difference_count += 1
-                self.assertTrue(difference_count < 100,  msg="Failed for IP %s" % ip)
+                    #print("%-15s > cymru: %6s, pyasn: %6s" % (ip, b, a), file=stderr)  # todo: print this in file
+                self.assertTrue(difference_count < 30,  msg="Failed for >%d cases" % difference_count)
 
     def test_compatibility(self):
         """
