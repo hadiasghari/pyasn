@@ -28,14 +28,16 @@ from socket import inet_ntoa
 from struct import unpack, pack
 from time import time, asctime
 
-"""pyasn.mrtx: module to parse MRT/RIB BGP table dumps (in order to convert them IPASN database
+"""pyasn.mrtx
+Module to parse MRT/RIB BGP table dumps (in order to create the IPASN database).
 
-   pyasn.mrtx.parse_file(file_descriptor):
-    
-   pyasn.mrtx.MRT_* classes: internally used to hold and parse the MRT dumps.
+Functions:
+  parse_mrt_file()  -- main function
+  util_dump_prefixes_to_textfile()
+
+Other objects:
+   MRT* and pyasn.mrtx.BGP* classes: internally used to hold and parse the MRT dumps.
 """
-
-# Note: currently it has only IPv4 support. For IPv6 support, changes are needed, partially marked in code.
 
 
 def parse_mrt_file(file, print_progress=False, debug_break_after=None):
@@ -43,9 +45,11 @@ def parse_mrt_file(file, print_progress=False, debug_break_after=None):
 Parses an MRT/RIB dump file.\n
     in: opened dump file to use (file-object)
     out: { "NETWORK/MASK" : ASN | set([Originating ASNs]) }
-\nBoth version 1 & 2 table dumps are supported, as well as 32bit ASNs.
-The originating ASN is usually one; however, for some prefixes (explained in the class), it's unclear amoung a few.
-"""  
+\n
+The originating ASN is usually one; however, for some prefixes (explained in the module), it's unclear, among a few.
+\n
+Both version 1 & 2 TABLE_DUMPS are supported, as well as 32bit ASNs. However, this module doesn't yet support IPv6.
+"""
     results = {}
     n, stime = 0, time()
     while True:
@@ -97,15 +101,19 @@ def util_dump_prefixes_to_textfile(ipasn_dat, out_file_name, orig_mrt_name):
     
 #####################################################################
 # MRT headers, tables, and attributes sections
-# MRT spec at: http://tools.ietf.org/html/rfc6396)
+# MRT format spec at: http://tools.ietf.org/html/rfc6396
+# BGP attribute spec at: http://tools.ietf.org/html/rfc4271
 
-# performance notes:
+# IPv6 warning: currently this module has only IPv4 support. For IPv6, changes are needed, partially marked in code.
+
+# Performance notes:
 #  -this code isn't super fast, but that's OK because it's run once to convert/parse the MRT files
-#  - it can be sped up perhaps by replacing some unpacks with ord(), etc, or moving to C
-#  - it's not a full MRT parser;  we ignore types/attributes we don't need...
+#  - it can be sped up perhaps by replacing some unpacks with ord(), profiling, etc, or rewriting in C
+#  - it's not a full MRT parser;  we ignore types/attributes we don't need
+
 
 class MrtRecord:
-    """Class for generic MRT Records. Implments common header, as well as methods for specific types"""
+    """Class for generic MRT Records. Implements common header, as well as methods for specific types"""
 
     # We are interested in MRT-record types Table_Dump & Table_Dump_V2, and among them in some sub-types
     TYPE_TABLE_DUMP = 12
@@ -113,7 +121,6 @@ class MrtRecord:
     T1_AFI_IPv4 = 1
     T2_PEER_INDEX_TABLE = 1
     T2_RIB_IPV4_UNICAST = 2
-
     # For IPv6, these types are needed
     # T1_AFI_IPv6 = 2
     # T2_RIB_IPV6_UNICAST = 4
@@ -159,11 +166,11 @@ class MrtRecord:
     @property
     def as_path(self):
         path = None
-        # For MRTDUMPv2 we only use entry 0 attributes. is this OK? (DumpV1 only has single entry)
+        # For TableDumpV2 we only use entry 0 attributes. is this OK? (DumpV1 only has single entry)
         attrs = self.table.attrs if self.type == MrtRecord.TYPE_TABLE_DUMP else self.table.entries[0].attrs
         for a in attrs:
             if a.bgp_type == BgpAttribute.ATTR_AS_PATH:
-                assert not path  # we have only one as-path attribute in each entry
+                assert not path  # only one as-path attribute in each entry
                 path = a.attr_detail
         assert path
         return path
@@ -194,7 +201,6 @@ class MrtTableDump1:
             j -= len(a)
         assert not j and not buf  # make sure all data is used
 
-
     def __str__(self):
         return 'MrtTableDump1 {seq:%d, prefix:%s + sole entry [attr-len:%d, peer:%d, orig-ts:%d]}' % \
             (self.seq, self.s_prefix, self.attr_len, self.peer_as, self.orig_ts)
@@ -210,19 +216,11 @@ class MrtTableDump2:
         self.seq = unpack('>I', buf[0:4])[0]
         mask = buf[4]
         octets = (mask + 7) // 8
-        assert sub_type2 == MrtRecord.T2_RIB_IPV4_UNICAST  # only IPv4 support for now. For IPv6, parts below need change
+
+        assert sub_type2 == MrtRecord.T2_RIB_IPV4_UNICAST  # only IPv4 support now. For IPv6, parts need change
         assert 0 <= octets <= 4  # e.g., more octets for ipv6
-        s = ".".join([str(b) for b in buf[5: 5 + octets]])  # TODO: for py2 one needs STR(ORD(b)) I think. figure this
+        s = ".".join([str(b) for b in buf[5: 5 + octets]])  # TODO: py2 might need STR(ORD(b)) -- check
         s_prefix = {0: '0.0.0.0', 1: s + '.0.0.0', 2: s + '.0.0', 3: s + '.0', 4: s}[octets]
-
-       # todo: do double check: changed this to // for py3 compatibility on 2014-09-13, and changes below
-        if octets == 0:  tmpx, tmps = 5, '0.0.0.0'
-        elif octets == 1:  tmpx, tmps = 6, '%d.0.0.0' % buf[5]  # for python2 one needs ord
-        elif octets == 2: tmpx, tmps = 7, '%d.%d.0.0' % tuple(buf[5:7])
-        elif octets == 3:  tmpx, tmps = 8, '%d.%d.%d.0' % tuple(buf[5:8])
-        else: tmpx, tmps = 9, '%d.%d.%d.%d' % tuple(buf[5:9])
-        assert tmps == s_prefix
-
         self.s_prefix = s_prefix + "/%d" % mask
 
         entry_count = unpack('>H', buf[5 + octets:7 + octets])[0]
@@ -290,7 +288,7 @@ class BgpAttribute:
             _len = unpack('>H', buf[2:4])[0]
             self.data = buf[4:4 + _len]
         else:
-            _len =  buf[2]
+            _len = buf[2]
             self.data = buf[3:3 + _len]
         if self.bgp_type == self.ATTR_AS_PATH:
             self.attr_detail = self.BgpAttrASPath(self.data, is32)
@@ -323,7 +321,7 @@ class BgpAttribute:
             """Returns the originating AS for this prefix - an integer if clear, a set of integers not fully unclear"""
 
             # To identify the originating AS for a prefix, we need to understand how the path-segments work
-
+            #
             # RFC 4271 on how AS_PATH is created
             # - when a BGP speaker advertises route to an internal peer, it shall not modify the AS_PATH
             # - when a BGP speaker advertises the route to an external peer, it updates AS_PATH attribute as follows:
@@ -346,21 +344,19 @@ class BgpAttribute:
             #   AS_SETs are sufficient to avoid routing loops; however, they may prune feasible paths. In practice,
             #   this is not a problem because once an IP packet arrives at the edge of a group of ASes, the BGP speaker
             #   is likely to have more detailed path information.
-
-            # So basically:
+            #
+            # CONCLUSION:
             #  i- go to the last path segment, among the many.
             #  ii- if it's a sequence, return the last AS; if it's a set, return all ASes; callee can choose any
 
             origin = None
-            #  assert: sequence & sets can interleave; but always at least one sequence will be before a set!
+            #  assert: sequence & sets can interleave; but at least one sequence before them will be a set!
             assert self.pathsegs[0].seg_type == self.BgpPathSegment.AS_SEQUENCE
             last_seg = self.pathsegs[-1]
             if last_seg.seg_type == self.BgpPathSegment.AS_SEQUENCE:
                 origin = int(last_seg.path[-1])
             elif last_seg.seg_type == self.BgpPathSegment.AS_SET:
                 origin = set(last_seg.path) if len(last_seg.path) > 1 else int(last_seg.path[-1])
-            if len(self.pathsegs) > 2:
-                pass  # had a bug before, when > 2 path segments we returned nothing. not sure how often it happened
             return origin
 
         class BgpPathSegment:
@@ -371,7 +367,7 @@ class BgpAttribute:
             def __init__(self, data, is32):
                 self.seg_type, cnt = unpack('>BB', data[:2])
                 data = data[2:]
-                assert self.seg_type in (self.AS_SET, self.AS_SEQUENCE)  # also 3?
+                assert self.seg_type in (self.AS_SET, self.AS_SEQUENCE)
                 self.path = []
                 self.as_len = 4 if is32 else 2
                 for i in range(cnt):
