@@ -61,21 +61,22 @@ class TestCorrectness(TestCase):
         """
         f = gzip.open(STATIC_OLD_PYASN_MAPPING_PATH, "rb")
         logger.debug("Loading mapping file ...")
-        static_mapping = pickle.load(f)
-        self.assertTrue(len(static_mapping) > 0, msg="Failed to Load RESOURCE.static.map! Resource was not found or was empty.")
+        old_mapping = pickle.load(f)
+        self.assertTrue(len(old_mapping) > 0, msg="Failed to Load RESOURCE.static.map! Resource was not found or was empty.")
         logger.debug("Mapping file loaded.")
-        same_count, difference_count = (0, 0)
-        for nip in sorted(static_mapping.keys()):  # For test consistency we sort the order in which we check the ips
+        same, diff = (0, 0)
+
+        for nip in sorted(old_mapping.keys()):  # For test consistency we sort the order in which we check the ips
             sip = inet_ntoa(pack('>I', nip))
-            pyasn_value, prefix = self.asndb.lookup(sip)
-            old_pyasn_value = static_mapping[nip]
-            if pyasn_value != old_pyasn_value:
-                logger.debug("AS Lookup inconsistent for %s current_pyasn = %s pyasn-v1.2 = %s" % (sip, pyasn_value, old_pyasn_value))
-                difference_count += 1
+            asn, prefix = self.asndb.lookup(sip)
+            old_asn = old_mapping[nip]
+            if asn != old_asn:
+                logger.debug("AS Lookup inconsistent for %s current_pyasn = %s pyasn-v1.2 = %s" % (sip, asn, old_asn))
+                diff += 1
             else:
-                same_count += 1
-            self.assertEqual(difference_count, 0, msg="Too Many failures!")
-        logger.info("same: %d, diff: %d" % (same_count, difference_count))
+                same += 1
+            self.assertEqual(diff, 0, msg="Too Many failures!")
+        logger.info("same: %d, diff: %d" % (same, diff))
         f.close()
 
 # whois -h whois.cymru.com " -f 216.90.108.31 2005-12-25 13:23:01 GMT"
