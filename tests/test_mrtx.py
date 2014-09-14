@@ -57,15 +57,15 @@ class ConvertMRTFile(TestCase):
         self.assertIsInstance(mrt.table, MrtTableDump2)
         self.assertEqual(mrt.table_seq, 0)
         self.assertEqual(mrt.prefix, "0.0.0.0/0")
-        self.assertEqual(len(mrt.table.entries), 1)
+        self.assertEqual(mrt.table.entry_count, 1)
         entry = mrt.table.entries[0]
         self.assertEqual(entry.attr_len, 36)
         self.assertEqual(entry.peer, 32)
         self.assertEqual(entry.orig_ts, 1399538361)
-        self.assertEqual(len(entry.attrs), 4)
+        #self.assertEqual(len(entry.attrs), 4) -- due to optimization i'm not reading rest of attributes
+        #self.assertEqual(entry.attrs[2].bgp_type, 3)
+        #self.assertEqual(entry.attrs[3].bgp_type, 4)
         self.assertEqual(entry.attrs[0].bgp_type, 1)
-        self.assertEqual(entry.attrs[2].bgp_type, 3)
-        self.assertEqual(entry.attrs[3].bgp_type, 4)
         self.assertEqual(entry.attrs[1].bgp_type, BgpAttribute.ATTR_AS_PATH)
         attr = entry.attrs[1]
         self.assertEqual(attr.flags, 80)
@@ -83,14 +83,12 @@ class ConvertMRTFile(TestCase):
         self.assertEqual(mrt.data_len, 1415)
         self.assertEqual(mrt.table_seq, 1)
         self.assertEqual(mrt.prefix, "1.0.0.0/24")
-        self.assertEqual(len(mrt.table.entries), 32)  # wow!
+        self.assertEqual(mrt.table.entry_count, 32)  # wow!
         entry = mrt.table.entries[0]
         self.assertEqual(entry.attr_len, 29)
         self.assertEqual(entry.peer, 23)
-        self.assertEqual(len(entry.attrs), 3)
         self.assertEqual(entry.attrs[0].bgp_type, 1)
         self.assertEqual(entry.attrs[1].bgp_type, BgpAttribute.ATTR_AS_PATH)
-        self.assertEqual(entry.attrs[2].bgp_type, 3)
         attr = entry.attrs[1]
         self.assertEqual(attr.flags, 80)
         self.assertEqual(len(attr.data), 14)
@@ -132,10 +130,10 @@ class ConvertMRTFile(TestCase):
         """
             Tests pyasn.mrtx.parse_file() - converting a full RIB file
         """
-        print("hardcoded to skip full test... ", file=stderr, end='')
-        return  # comment for full test; however, would be nicer to run/not-run via flag
+        #print("hardcoded to skip full test... ", file=stderr, end='')
+        #return  # comment for full test; however, would be nicer to run/not-run via flag
 
-        test_limit = 11000  # set to None for all records
+        test_limit = 21000  # set to None for all records
         with bz2.BZ2File(RIB_FULLDUMP_PATH, 'rb') as f:
             converted = parse_mrt_file(f, print_progress=True, debug_break_after=test_limit)
 

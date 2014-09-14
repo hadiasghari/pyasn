@@ -199,6 +199,8 @@ class MrtTableDump1:
             self.attrs.append(a)
             buf = buf[len(a):]
             j -= len(a)
+            #if a.bgp_type == BgpAttribute.ATTR_AS_PATH:
+            #    break  # speed optimization: we can stop parsing other attributes after ASPATH
         assert not j and not buf  # make sure all data is used
 
     def __str__(self):
@@ -223,14 +225,15 @@ class MrtTableDump2:
         s_prefix = {0: '0.0.0.0', 1: s + '.0.0.0', 2: s + '.0.0', 3: s + '.0', 4: s}[octets]
         self.s_prefix = s_prefix + "/%d" % mask
 
-        entry_count = unpack('>H', buf[5 + octets:7 + octets])[0]
+        self.entry_count = unpack('>H', buf[5 + octets:7 + octets])[0]
         buf = buf[7 + octets:]
         self.entries = []
-        for i in range(entry_count):
+        for i in range(self.entry_count):
             e = self.T2RibEntry(buf)
             self.entries.append(e)
             buf = buf[len(e):]
-        assert not buf  # assert fully parsed
+            break  # speed optimization - ONLY MAP FIRST; shaves 50% time
+        #assert not buf  # assert fully parsed; will now fail becasue of break
 
     def __str__(self):
         return 'MrtTableDump2 {seq:%d, prefix:%s, entries:%d}' % (self.seq, self.s_prefix, len(self.entries))
@@ -251,7 +254,9 @@ class MrtTableDump2:
                     data = data[len(attr):]
                     j -= len(attr)
                     self._attrs.append(attr)
-                assert not j and not data  # make sure all data is used
+                    if attr.bgp_type == BgpAttribute.ATTR_AS_PATH:
+                        break  # speed optimization: parsing other attributes after ASPATH. shaves 30% time
+                #assert not j and not data  # make sure all data is used. will fail with optimization above
             return self._attrs
 
         def __len__(self):
