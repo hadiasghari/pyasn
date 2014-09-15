@@ -2,6 +2,7 @@ from __future__ import print_function
 import codecs
 import sys
 import platform
+import glob
 
 from setuptools import setup, find_packages, Extension
 from os.path import abspath, dirname, join
@@ -22,6 +23,9 @@ extra_kwargs['ext_modules'] = [ext]
 reqs = []
 if sys.version_info[0] == 2 and sys.version_info[1] < 7:
     reqs.append('ordereddict')
+
+datafiles = glob.glob('data/*.dat')
+utils = glob.glob('pyasn-utils/*.py')
 
 setup(
     name='pyasn',
@@ -44,8 +48,8 @@ setup(
     ],
     keywords='ip asn autonomous system bgp whois prefix radix python routing networking',
     install_requires=reqs,
-    data_files={'pyasn_data': ['data/*.dat']},
-    scripts={},
+    data_files=datafiles,
+    scripts=utils,
     setup_requires=[],
     tests_require=['nose', 'coverage'],
     packages=find_packages(exclude=['tests', 'tests.*']),

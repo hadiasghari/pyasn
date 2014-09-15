@@ -3,7 +3,7 @@
 ==========
 
 CRITICAL
-* location for DB files, where to downdload?
+* Location for DB files, where to downdload?
 
 * mrtx
     * test on old conversion too
