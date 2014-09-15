@@ -19,6 +19,10 @@ ext = Extension('pyasn.pyasn_radix',
 extra_kwargs = {}
 extra_kwargs['ext_modules'] = [ext]
 
+reqs = []
+if sys.version_info[0] == 2 and sys.version_info[1] < 7:
+    reqs.append('ordereddict')
+
 setup(
     name='pyasn',
     version='1.5.0b1',
@@ -39,7 +43,7 @@ setup(
         'Programming Language :: Python :: 3',
     ],
     keywords='ip asn autonomous system bgp whois prefix radix python routing networking',
-    install_requires=[],
+    install_requires=reqs,
     data_files={'pyasn_data': ['data/*.dat']},
     scripts={},
     setup_requires=[],

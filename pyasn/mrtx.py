@@ -32,9 +32,8 @@ from sys import stderr, version_info
 try:
     from collections import OrderedDict
 except:
-    # python 2.6 support, as it doesn't have OrderedDicts.
-    # an alternative to this simple fix is to backport from: http://code.activestate.com/recipes/576693/
-    OrderedDict = dict
+    # python 2.6 support - needs the ordereddict module
+    from ordereddict import OrderedDict
 
 
 """pyasn.mrtx

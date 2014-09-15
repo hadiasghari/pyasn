@@ -53,7 +53,7 @@ class ConvertMRTFile(TestCase):
         self.assertEqual(mrt.sub_type, MrtRecord.T2_RIB_IPV4_UNICAST)
         self.assertEqual(mrt.ts, 1400824800)
         self.assertEqual(mrt.data_len, 51)
-        self.assertIsInstance(mrt.table, MrtTableDump2)
+        self.assertTrue(isinstance(mrt.table, MrtTableDump2))
         self.assertEqual(mrt.table_seq, 0)
         self.assertEqual(mrt.prefix, "0.0.0.0/0")
         self.assertEqual(mrt.table.entry_count, 1)
@@ -67,7 +67,7 @@ class ConvertMRTFile(TestCase):
         attr = entry.attrs[1]
         self.assertEqual(attr.flags, 80)
         self.assertEqual(len(attr.data), 14)
-        self.assertIsInstance(attr.attr_detail, BgpAttribute.BgpAttrASPath)
+        self.assertTrue(isinstance(attr.attr_detail, BgpAttribute.BgpAttrASPath))
         aspath = attr.attr_detail
         self.assertEqual(len(aspath.pathsegs), 1)
         self.assertEqual(str(aspath.pathsegs[0]), "[2905, 65023, 16637]")
@@ -76,7 +76,7 @@ class ConvertMRTFile(TestCase):
 
         # third record -
         mrt = MrtRecord.next_dump_table_record(f)
-        self.assertIsInstance(mrt.table, MrtTableDump2)
+        self.assertTrue(isinstance(mrt.table, MrtTableDump2))
         self.assertEqual(mrt.data_len, 1415)
         self.assertEqual(mrt.table_seq, 1)
         self.assertEqual(mrt.prefix, "1.0.0.0/24")
@@ -89,7 +89,7 @@ class ConvertMRTFile(TestCase):
         attr = entry.attrs[1]
         self.assertEqual(attr.flags, 80)
         self.assertEqual(len(attr.data), 14)
-        self.assertIsInstance(attr.attr_detail, BgpAttribute.BgpAttrASPath)
+        self.assertTrue(isinstance(attr.attr_detail, BgpAttribute.BgpAttrASPath))
         aspath = attr.attr_detail
         self.assertEqual(len(aspath.pathsegs), 1)
         self.assertEqual(str(aspath.pathsegs[0]), "[701, 6453, 15169]")
@@ -109,12 +109,12 @@ class ConvertMRTFile(TestCase):
 
         for n in range(2, 9000):
             mrt = MrtRecord.next_dump_table_record(f)
-            self.assertIsInstance(mrt.table, MrtTableDump2)
+            self.assertTrue(isinstance(mrt.table, MrtTableDump2))
             self.assertEqual(mrt.table_seq, n)
-            self.assertIsNotNone(mrt.as_path)
+            self.assertTrue(mrt.as_path is not None)
             prefix = mrt.prefix
             origin = mrt.as_path.origin_as
-            self.assertIsNotNone(origin)  # an integer or set!
+            self.assertTrue(origin)  # an integer or set!
             if prefix in assert_results:
                 self.assertEqual(assert_results[prefix], origin, "error in origin for prefix: %s" % prefix)
 
@@ -127,12 +127,13 @@ class ConvertMRTFile(TestCase):
         """
             Tests pyasn.mrtx.parse_mrt_file() - converts a full (TD2) RIB file, and compares results with pyasn v1.2
         """
-        if not path.isfile(RIB_FULLDUMP_PATH):
+        if True or not path.isfile(RIB_FULLDUMP_PATH):
             print("skip test, full rib dump doesn't exist... ", file=stderr, end='')
             return
 
-        with bz2.BZ2File(RIB_FULLDUMP_PATH, 'rb') as f:
-            converted = parse_mrt_file(f, print_progress=True, debug_break_after=None)
+        f = bz2.BZ2File(RIB_FULLDUMP_PATH, 'rb')
+        converted = parse_mrt_file(f, print_progress=True, debug_break_after=None)
+        f.close()
 
         # test of write-output
         util_dump_prefixes_to_textfile(converted, TMP_IPASN_PATH, RIB_FULLDUMP_PATH, debug_write_sets=True)
