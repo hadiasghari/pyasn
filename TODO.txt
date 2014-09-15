@@ -8,6 +8,7 @@ CRITICAL
 * update documentation and docstrings
     * Add thanks to arman + link to our group :)
     * add how to get latest RIB to documentation
+    * tested on py33. add this to README.
 
 
 BACKLOG - for NEXT RELEASES
@@ -18,7 +19,6 @@ FOR RC STATUS:
     * hopefully solved by new MRTX changes? (how much has the latest changes made a difference?)
     * test with RIPE RIS too! (http://www.ripe.net/data-tools/stats/ris/ris-raw-data)
     * understand the nature of multiple entries in RIB. we use only first.
-* test python 3.3
 * test for windows
 * mrtx:  test on old conversion too (hadi)
 * ipv6 support:
