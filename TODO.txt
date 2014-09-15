@@ -3,7 +3,9 @@
 ==========
 
 CRITICAL
-*mrtx
+* location for DB files, where to downdload?
+
+* mrtx
     * test on old conversion too
     * how much does the new changes solve the CYMRU list?
 
@@ -11,9 +13,13 @@ CRITICAL
     * installer needs to copy pyasn-utils and data/*.dat files as samples to work with
     * cleanup not working?
     * -what is our "coverage" ?
-* assert unimplemented binary db and as names files
+
+* assert unimplemented binary db and as names files (Done)
+
 * test helper scripts with python 3  (- in particular: urllib2 in weget_rib)
+
 * upload to pip
+
 * update documentation and docstrings
     * also on github: Add thanks to arman + link to our group :)
 
