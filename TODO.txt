@@ -16,7 +16,7 @@ FOR RC STATUS:
 * implement as name lookup
 * test binary ipasn db load and usage
 * understand difference with cymru whois lookup
-    * hopefully solved by new MRTX changes? (how much has the latest changes made a difference?)
+    * hopefully solved by new MRTX changes? (no - checked - no difference!)
     * test with RIPE RIS too! (http://www.ripe.net/data-tools/stats/ris/ris-raw-data)
     * understand the nature of multiple entries in RIB. we use only first.
 * test for windows

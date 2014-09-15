@@ -40,7 +40,7 @@ class LoadRadixPickle(TestCase):
 
     def test_consistency(self):
         """
-            Checks if pyasn is consistently loaded and that it returns a consistent answer
+            Tests if pyasn is consistently loaded and that it returns a consistent answer
         """
         db = pyasn.pyasn(IPASN_DB_PATH)
         asn, prefix = db.lookup('8.8.8.8')
@@ -51,7 +51,7 @@ class LoadRadixPickle(TestCase):
 
     def test_correctness(self):
         """
-            Checks if pyasn returns the correct AS number
+            Tests if pyasn returns the correct AS number with simple data base
         """
         for i in range(4):
             asn, prefix = self.asndb_fake.lookup("1.0.0.%d" % i)
@@ -82,7 +82,7 @@ class LoadRadixPickle(TestCase):
 
     def test_as_number_convert(self):
         """
-            Checks for correct conversion between 32-bit and ASDOT number formats for Autonomous System numbers.
+            Tests for correct conversion between 32-bit and ASDOT number formats for Autonomous System numbers.
         """
         self.assertEqual("AS1.5698", pyasn.pyasn.convert_32bit_to_asdot_asn_format(71234))
         self.assertEqual("AS2.321", pyasn.pyasn.convert_32bit_to_asdot_asn_format(131393))

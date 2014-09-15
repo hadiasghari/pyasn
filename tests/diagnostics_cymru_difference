@@ -1,6 +1,8 @@
-# not sure why we don't have these in the DAT, but we don't. 
-# so pyasn worked correctly
-# todo: check RIB-converter for these ranges
+# checked the DAT files; pyasn worked correctly
+# checked MRT/RIB-converter for these ranges; with the latest changes, same response
+#   (could still be related to multiple TD entries, or different routeview points)
+
+# # not sure why we don't have these in the DAT, but we don't.
 104.135.25.154  > cymru:  36384, pyasn:   None
 104.144.210.69  > cymru:  55286, pyasn:   None
 104.175.46.164  > cymru:  20001, pyasn:   None
@@ -19,27 +21,27 @@
 49.232.221.106  > cymru:   None, pyasn:  62294
 # whois resolves to BJENET (Chinese), AS-name is Castcable HK
 
-??
+# are these same/different??
 171.0.248.105   > cymru:  17552, pyasn:   9874  # StarHub, TrueAS
 147.53.153.218  > cymru:    174, pyasn:   1767  # Cogent, Indiana Higher Edu
 172.224.18.176  > cymru:  35994, pyasn:  31377  # akamai, vodacom
 
-#OK
-# AS names indicate same owner
-# TODO: check RIB convert too, perhaps case of equal-length-as-paths
+#OK - AS names indicate same owner
 132.11.174.152  > cymru:    367, pyasn:    721  # DOD
 46.152.156.165  > cymru:  34400, pyasn:  35819  # Etisalat
+99.17.28.174    > cymru:   7018, pyasn:   7132  # AT&T
 
-COMCAST:
-71.228.112.206  > cymru:  33654, pyasn:   7922
-71.236.106.88   > cymru:   7016, pyasn:   7922
-73.181.253.215  > cymru:  33650, pyasn:   7922
-98.197.5.181    > cymru:  33662, pyasn:   7922
+#OK, COMCAST:
 50.167.229.42   > cymru:   7725, pyasn:   7922
 66.177.71.176   > cymru:  33489, pyasn:   7922
 67.180.151.181  > cymru:  33651, pyasn:   7922
 69.252.244.180  > cymru:  33491, pyasn:   7922
+71.228.112.206  > cymru:  33654, pyasn:   7922
+71.236.106.88   > cymru:   7016, pyasn:   7922
+73.181.253.215  > cymru:  33650, pyasn:   7922
+98.197.5.181    > cymru:  33662, pyasn:   7922
 
 
-AT&T
-99.17.28.174    > cymru:   7018, pyasn:   7132
+
+
+
