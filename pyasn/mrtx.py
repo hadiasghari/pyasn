@@ -114,17 +114,18 @@ def dump_prefixes_to_text_file(ipasn_data, out_text_file_name, orig_mrt_name, de
 
 
 def dump_prefixes_to_binary_file(ipasn_data, out_bin_file_name, orig_mrt_name, extra_comments=""):
-    # todo: this funciton needs testing in both python 2, 3, and with the binary-reader
-
+    # todo: this funciton writes the binary output (tested in Py2 & 3). however, can the reader read it? :)
     fw = open(out_bin_file_name, 'wb')
     # write common header
-    fw.write(str.encode('PYASN'))  # magic header
+    fw.write(b'PYASN')  # magic header
     fw.write(b'\x01')  # binary format version 1 - IPv4
     fw.write(pack('I', 0))  # number of records; will need to be updated at the end.
 
     # let's store comments and the name of the input file in the binary; good for debugging. max 500 bytes.
-    comments = "Created <%s>, from: %s. Comments: %s" % (asctime(), orig_mrt_name, extra_comments)
-    comments = comments.encode('ASCII', errors='replace')[:499] + b'\0'  # convert to bytes, trim, terminate
+    comments = "Created <%s>, from: %s. %s" % (asctime(), orig_mrt_name, extra_comments)
+    if not IS_PYTHON2:
+        comments = comments.encode('ASCII', errors='replace')  # convert to bytes
+    comments = comments[:499] + b'\0'  # trim, terminate
     fw.write(pack('h', len(comments)))
     fw.write(comments)
 
@@ -133,19 +134,18 @@ def dump_prefixes_to_binary_file(ipasn_data, out_bin_file_name, orig_mrt_name, e
         if isinstance(origin, set):
             origin = list(origin)[0]  # get an AS randomly, or the only AS if just one, from the set
         network, mask = prefix.split('/')
-        mask = int(mask)
-        fw.write(inet_aton(network))
-        fw.write(pack('B', mask))  # for IPv6: need more bytes here; and IP-family in header
+        fw.write(inet_aton(network))  # for IPv6: need more bytes here
+        fw.write(pack('B', int(mask)))
         fw.write(pack('I', origin))
         n += 1
 
-    fw.write(bytes(9))  # write one terminating zero record
+    fw.write(b'\0'*9)  # write one terminating zero record
     fw.seek(6)
-    fw.write(pack('I', n))     # update number of records at start of file.
+    fw.write(pack('I', n))  # update number of records at start of file.
     fw.close()
 
 
-    
+
 #####################################################################
 # MRT headers, tables, and attributes sections
 # MRT format spec at: http://tools.ietf.org/html/rfc6396
