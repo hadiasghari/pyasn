@@ -30,7 +30,7 @@ from sys import stderr
 
 IPASN_DB_PATH = os.path.join(os.path.dirname(__file__), "../data/ipasn_20140513.dat")
 STATIC_WHOIS_MAPPING_PATH = os.path.join(os.path.dirname(__file__), "../data/cymru.map")
-STATIC_OLD_PYASN_MAPPING_PATH = os.path.join(os.path.dirname(__file__), "../data/pyasn_v1.2__ipasn_20140513__sample_10000.pickle.gz")
+STATIC_PYASN_v1_2_MAPPING_PATH = os.path.join(os.path.dirname(__file__), "../data/pyasn_v1.2__ipasn_20140513__sample_10000.pickle.gz")
 logger = logging.getLogger()
 
 
@@ -44,10 +44,9 @@ class TestCorrectness(TestCase):
         with open(STATIC_WHOIS_MAPPING_PATH, "r") as f:
             static_mapping = eval(f.read())
             self.assertTrue(len(static_mapping) > 0,
-                           msg="Failed to Load RESOURCE.static.map! Resource was not found or was empty.")
-            # For test output consistency we sort the order in which we check the ips            
+                           msg="Failed to Load cymru.map! Test resource not found or empty.")
             difference_count = 0
-            for ip in sorted(static_mapping.keys()):
+            for ip in sorted(static_mapping.keys()):  # For output consistency sort the order in which we check the ips
                 a, prefix = self.asndb.lookup(ip)
                 b = static_mapping[ip]
                 if a != b:
@@ -59,14 +58,16 @@ class TestCorrectness(TestCase):
         """
             Checks if pyasn returns the same AS number as the old version of pyasn.
         """
-        f = gzip.open(STATIC_OLD_PYASN_MAPPING_PATH, "rb")
+        f = gzip.open(STATIC_PYASN_v1_2_MAPPING_PATH, "rb")
         logger.debug("Loading mapping file ...")
         old_mapping = pickle.load(f)
-        self.assertTrue(len(old_mapping) > 0, msg="Failed to Load RESOURCE.static.map! Resource was not found or was empty.")
+        self.assertTrue(len(old_mapping) > 0,
+                        msg="Failed to Load pyasn_v1.2__ipasn_20140513__sample_10000.pickle.gz!"
+                            + " Test resource not found or empty.")
         logger.debug("Mapping file loaded.")
         same, diff = (0, 0)
 
-        for nip in sorted(old_mapping.keys()):  # For test consistency we sort the order in which we check the ips
+        for nip in sorted(old_mapping.keys()):  # For output consistency we sort the order in which we check the ips
             sip = inet_ntoa(pack('>I', nip))
             asn, prefix = self.asndb.lookup(sip)
             old_asn = old_mapping[nip]
@@ -80,7 +81,3 @@ class TestCorrectness(TestCase):
         f.close()
 
 # whois -h whois.cymru.com " -f 216.90.108.31 2005-12-25 13:23:01 GMT"
-
-
-
-
