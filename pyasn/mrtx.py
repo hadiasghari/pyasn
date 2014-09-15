@@ -383,8 +383,7 @@ class BgpAttribute:
             if last_seg.seg_type == self.BgpPathSegment.AS_SEQUENCE:
                 origin = int(last_seg.path[-1])
             elif last_seg.seg_type == self.BgpPathSegment.AS_SET:
-                #origin = set(last_seg.path) if len(last_seg.path) > 1 else int(last_seg.path[-1])
-                origin = set(last_seg.path)  # todo: for debug I return as set, but above for sets of 1 is better...
+                origin = set(last_seg.path)
             return origin
 
         class BgpPathSegment:
