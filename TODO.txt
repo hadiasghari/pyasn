@@ -1,0 +1,23 @@
+
+2014-09-12
+==========
+
+CRITICAL
+
+* pyasn_mrtx needs to be placed into the pyasn folder and distributed along with the package
+* test installer
+    * installer needs to copy pyasn-utils and data/*.dat files as samples to work with
+* assert unimplemented binary db and as names files
+* test helper scripts with python 3
+* upload to pip
+* update documentation and docstrings
+
+
+BACKLOG - for NEXT RELEASES
+* understand difference with cymru whois lookup
+* implement as name lookup
+* test binary ipasn db load and usage
+* ipv6 tests
+* test for windows
+* upload our own asndb files to different github repository for users
+* Test RIB converter

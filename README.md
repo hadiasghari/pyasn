@@ -114,3 +114,8 @@ The main portions of the directory tree are as follows: ::
     ├── pyasn-helper/*.py       # Scripts to convert BGP MRT dumps to IPASN databases
     ├── tests/                  # Tests 
     └── setup.py                # Standard setup.py for installation/testing/etc.
+
+
+Testing
+-------
+Tested with python version 2.6 & 2.7 and 3.4

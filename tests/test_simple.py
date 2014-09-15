@@ -80,4 +80,20 @@ class LoadRadixPickle(TestCase):
        # todo: check that it raises expcetion
        # self.ipdb.lookup_asn('300.3.4.4')
 
+    def test_as_number_convert(self):
+        """
+            Checks for correct conversion between 32-bit and ASDOT number formats for Autonomous System numbers.
+        """
+        self.assertEqual("AS1.5698", pyasn.pyasn.convert_32bit_to_asdot_asn_format(71234))
+        self.assertEqual("AS2.321", pyasn.pyasn.convert_32bit_to_asdot_asn_format(131393))
+        self.assertEqual("AS65535.0", pyasn.pyasn.convert_32bit_to_asdot_asn_format(4294901760))
+        self.assertEqual("AS65535.65535", pyasn.pyasn.convert_32bit_to_asdot_asn_format(4294967295))
+        self.assertEqual("AS0", pyasn.pyasn.convert_32bit_to_asdot_asn_format(0))
+
+        self.assertEqual(65536, pyasn.pyasn.convert_asdot_to_32bit_asn("AS1.0"))
+        self.assertEqual(71234, pyasn.pyasn.convert_asdot_to_32bit_asn("AS1.5698"))
+        self.assertEqual(4294967295, pyasn.pyasn.convert_asdot_to_32bit_asn("AS65535.65535"))
+        self.assertEqual(0, pyasn.pyasn.convert_asdot_to_32bit_asn("AS0"))
+        self.assertEqual(131393, pyasn.pyasn.convert_asdot_to_32bit_asn("AS2.321"))
+
 

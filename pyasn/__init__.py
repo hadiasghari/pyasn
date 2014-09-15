@@ -26,6 +26,7 @@ TODO: The docstring should list the pyasn() classes, with a one-line summary of 
 """
 
 from .pyasn_radix import Radix
+import re
 
 class pyasn(object):  
     """
@@ -94,7 +95,6 @@ class pyasn(object):
     def __repr__(self):
         return "pyasn(ipasndb:'%s'; asnames:'%s') - %d prefixes" % (self._ipasndb_file, self._asnames_file, self._records)
 
-    # todo: add two static converter methods to convert ASX.X format into 32bit ASN and vice-versa
 
 
     # Persistence support, for use with pickle.dump(), pickle.load()
@@ -113,3 +113,35 @@ class pyasn(object):
             
     def __reduce__(self):
         return Radix, (), self.__getstate__()
+
+    @staticmethod
+    def convert_32bit_to_asdot_asn_format(asn):
+        """
+        Converts a 32-bit AS number into the asdot format: "AS[Number].[Number]" (see rfc5396).
+
+        :param asn: The number of an AS in numerical format
+        :return: The AS number in "AS[Number].[Number]" format
+        """
+        div, mod = divmod(asn, 2**16)
+        return "AS%d.%d" % (div, mod) if div > 0 else "AS%d" % mod
+
+    @staticmethod
+    def convert_asdot_to_32bit_asn(asdot):
+        """
+        Converts a asdot representation of an AS to a 32bit AS number (see rfc5396).
+
+        :param asdot:  "AS[Number].[Number]" representation of an autonomous system
+        :return: 32bit AS number
+        """
+        pattern = re.compile("^[AS]|[as]|[aS]|[As]][0-9]*(\.)?[0-9]+")
+        match = pattern.match(asdot)
+        if not match:
+            raise ValueError("Invalid asdot format for input. input format must be something like AS<Number> or AS<Number>.<Number> ")
+        if asdot.find(".") > 0:  # asdot input is of the format AS[d+].<d+> for example AS1.234
+            s1, s2 = asdot.split(".")
+            i1 = int(s1[2:])
+            i2 = int(s2)
+            asn = 2**16 * i1 + i2
+        else:
+            asn = int(asdot[2:])  # asdot input is of the format AS[d+] for example AS123
+        return asn
