@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 # Copyright (c) 2009-2014 Hadi Asghari
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy

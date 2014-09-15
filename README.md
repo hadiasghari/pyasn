@@ -1,18 +1,18 @@
 pyasn
 ========
 
-.. image:: https://pypip.in/v/py-asn/badge.png
-   :target: https://pypi.python.org/pypi/py-asn
+.. image:: https://pypip.in/v/pyasn/badge.png
+   :target: https://pypi.python.org/pypi/pyasn
     
-.. image:: https://pypip.in/d/py-asn/badge.png
-   :target: https://pypi.python.org/pypi/py-asn
+.. image:: https://pypip.in/d/pyasn/badge.png
+   :target: https://pypi.python.org/pypi/pyasn
 
    
 pyasn is a Python extension module that enables you to perform very fast IP address to 
 Autonomous System Number lookups. Current state and Historical lookups can be done, 
 based on the BGP / MRT file used as input. 
 
-Pyasn is different from other as/asn lookup tools in that it providers offline historical lookups.
+pyasn is different from other as/asn lookup tools in that it providers offline historical lookups.
 It providers utility scripts for users to build their own offline historical DBs based on the BGP /MRT
 files. This will make pyasn much faster than online dig/whois/json lookups.
 
