@@ -27,6 +27,15 @@ from __future__ import print_function, division
 from socket import inet_ntoa
 from struct import unpack, pack
 from time import time, asctime
+from sys import stderr, version_info
+
+try:
+    from collections import OrderedDict
+except:
+    # python 2.6 support, as it doesn't have OrderedDicts.
+    # an alternative to this simple fix is to backport from: http://code.activestate.com/recipes/576693/
+    OrderedDict = dict
+
 
 """pyasn.mrtx
 Module to parse MRT/RIB BGP table dumps (in order to create the IPASN database).
@@ -50,7 +59,7 @@ The originating ASN is usually one; however, for some prefixes (explained in the
 \n
 Both version 1 & 2 TABLE_DUMPS are supported, as well as 32bit ASNs. However, this module doesn't yet support IPv6.
 """
-    results = {}
+    results = OrderedDict()
     n, stime = 0, time()
     while True:
         mrt = MrtRecord.next_dump_table_record(file)
@@ -82,20 +91,25 @@ Both version 1 & 2 TABLE_DUMPS are supported, as well as 32bit ASNs. However, th
         n += 1
         if debug_break_after and n > debug_break_after:
             break
-        if print_progress and n % 10000 == 0:
-            print('record %d @%.fs' % (n, time() - stime))
+        if print_progress and n % 100000 == 0:
+            print('record %d @%.fs' % (n, time() - stime), file=stderr)
     #
     if '0.0.0.0/0' in results:
         del results['0.0.0.0/0']  # remove default route - can be parameter
     return results
 
 
-def util_dump_prefixes_to_textfile(ipasn_dat, out_file_name, orig_mrt_name):
-    fw = open(out_file_name, 'wt', encoding='ASCII')  # todo: test 'encoding' python 2
+def util_dump_prefixes_to_textfile(ipasn_dat, out_file_name, orig_mrt_name, debug_write_sets=False):
+    if version_info[0] < 3:
+        fw = open(out_file_name, 'wt')
+    else:
+        fw = open(out_file_name, 'wt', encoding='ASCII')
     fw.write('; IP-ASN32-DAT file\n; Original file : %s\n' % orig_mrt_name)
     fw.write('; Converted on  : %s\n; Prefixes      : %s\n; \n' % (asctime(), len(ipasn_dat)))
-    for prefix, asn in sorted(ipasn_dat.items()):
-        fw.write('%s\t%d\n' % (prefix, asn))
+    for prefix, origin in ipasn_dat.items():
+        if not debug_write_sets and isinstance(origin, set):
+            origin = list(origin)[0]  # get an AS randomly, or the only AS if just one, from the set
+        fw.write('%s\t%s\n' % (prefix, origin))
     fw.close()
 
     
@@ -108,7 +122,7 @@ def util_dump_prefixes_to_textfile(ipasn_dat, out_file_name, orig_mrt_name):
 
 # Performance notes:
 #  -this code isn't super fast, but that's OK because it's run once to convert/parse the MRT files
-#  - it can be sped up perhaps by replacing some unpacks with ord(), profiling, etc, or rewriting in C
+#  - it can be sped up perhaps by replacing some struct.unpacks(), profiling, or rewriting in C
 #  - it's not a full MRT parser;  we ignore types/attributes we don't need
 
 
@@ -215,13 +229,16 @@ class MrtTableDump2:
     # Also, they permit a single MRT record to encode multiple RIB table entries for a single prefix.
 
     def __init__(self, buf, sub_type2):
-        self.seq = unpack('>I', buf[0:4])[0]
-        mask = buf[4]
+        self.seq, mask = unpack('>IB', buf[0:5])
         octets = (mask + 7) // 8
 
         assert sub_type2 == MrtRecord.T2_RIB_IPV4_UNICAST  # only IPv4 support now. For IPv6, parts need change
         assert 0 <= octets <= 4  # e.g., more octets for ipv6
-        s = ".".join([str(b) for b in buf[5: 5 + octets]])  # TODO: py2 might need STR(ORD(b)) -- check
+        if version_info[0] < 3:
+            # python 2 needs "ord()" to make it bytes -- todo: is there a more elegant solution?
+            s = ".".join([str(ord(b)) for b in buf[5: 5 + octets]])
+        else:
+            s = ".".join([str(b) for b in buf[5: 5 + octets]])
         s_prefix = {0: '0.0.0.0', 1: s + '.0.0.0', 2: s + '.0.0', 3: s + '.0', 4: s}[octets]
         self.s_prefix = s_prefix + "/%d" % mask
 
@@ -287,13 +304,18 @@ class BgpAttribute:
         return ext_len
 
     def __init__(self, buf, is32):
-        self.bgp_type = buf[1]
-        self.flags = buf[0]
+        if version_info[0] < 3:
+            self.flags, self.bgp_type = unpack('>BB', buf[0:2])
+        else:
+            self.flags, self.bgp_type = buf[0], buf[1]  # much faster than unpack
         if self._has_ext_len():
             _len = unpack('>H', buf[2:4])[0]
             self.data = buf[4:4 + _len]
         else:
-            _len = buf[2]
+            if version_info[0] < 3:
+                _len = ord(buf[2])
+            else:
+                _len = buf[2]
             self.data = buf[3:3 + _len]
         if self.bgp_type == self.ATTR_AS_PATH:
             self.attr_detail = self.BgpAttrASPath(self.data, is32)
@@ -361,7 +383,8 @@ class BgpAttribute:
             if last_seg.seg_type == self.BgpPathSegment.AS_SEQUENCE:
                 origin = int(last_seg.path[-1])
             elif last_seg.seg_type == self.BgpPathSegment.AS_SET:
-                origin = set(last_seg.path) if len(last_seg.path) > 1 else int(last_seg.path[-1])
+                #origin = set(last_seg.path) if len(last_seg.path) > 1 else int(last_seg.path[-1])
+                origin = set(last_seg.path)  # todo: for debug I return as set, but above for sets of 1 is better...
             return origin
 
         class BgpPathSegment:
