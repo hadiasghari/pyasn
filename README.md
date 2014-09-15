@@ -166,6 +166,6 @@ via GitHub at https://github.com/hadiasghari/pyasn or by contacting one of the t
 
 Testing
 -------
-This beta release has been tested under python version 2.6 & 2.7 and 3.4.
+This beta release has been tested under python version 2.6, 2.7, 3.3 and 3.4.
 We would appreciate contributions towards testing the pyasn pacakge! 
 Unit Tests are highly appreciated. 
