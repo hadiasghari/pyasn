@@ -127,7 +127,7 @@ class ConvertMRTFile(TestCase):
         """
             Tests pyasn.mrtx.parse_mrt_file() - converts a full (TD2) RIB file, and compares results with pyasn v1.2
         """
-        if True or not path.isfile(RIB_FULLDUMP_PATH):
+        if not path.isfile(RIB_FULLDUMP_PATH):
             print("skip test, full rib dump doesn't exist... ", file=stderr, end='')
             return
 
@@ -162,10 +162,10 @@ class ConvertMRTFile(TestCase):
             if prefix not in ipasndat_v12:
                 skipped_count += 1
                 origin = converted[prefix]
-                self.assertTrue(isinstance(origin, set), \
-                                msg="Unexplained extra prefix %s in new output" % prefix)
+                self.assertTrue(isinstance(origin, set), msg="Unexplained extra prefix %s in output" % prefix)
 
-        self.assertTrue(skipped_count < 132, msg="Many unexplained prefixes in new & old converter: %d" % skipped_count)
+        self.assertTrue(skipped_count < 132, msg="Many unexplained prefixes in new converter: %d" % skipped_count)
+        print("Prefixes in new converter (skipped before): %d" % skipped_count, file=stderr)
 
         # we should have all in baseline, if run fully
         for prefix in ipasndat_v12:

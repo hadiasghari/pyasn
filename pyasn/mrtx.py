@@ -23,19 +23,6 @@
 # Parts of this code are copied/based on the dpkt project, with their respective copyright
 # (see: https://code.google.com/p/dpkt/)
 
-from __future__ import print_function, division
-from socket import inet_ntoa
-from struct import unpack, pack
-from time import time, asctime
-from sys import stderr, version_info
-
-try:
-    from collections import OrderedDict
-except:
-    # python 2.6 support - needs the ordereddict module
-    from ordereddict import OrderedDict
-
-
 """pyasn.mrtx
 Module to parse MRT/RIB BGP table dumps (in order to create the IPASN database).
 
@@ -46,6 +33,19 @@ Functions:
 Other objects:
    MRT* and pyasn.mrtx.BGP* classes: internally used to hold and parse the MRT dumps.
 """
+
+from __future__ import print_function, division
+from socket import inet_ntoa
+from struct import unpack, pack
+from time import time, asctime
+from sys import stderr, version_info
+try:
+    from collections import OrderedDict
+except:
+    # python 2.6 support - needs the ordereddict module
+    from ordereddict import OrderedDict
+
+IS_PYTHON2 = (version_info[0] == 2)
 
 
 def parse_mrt_file(file, print_progress=False, debug_break_after=None):
@@ -99,7 +99,7 @@ Both version 1 & 2 TABLE_DUMPS are supported, as well as 32bit ASNs. However, th
 
 
 def util_dump_prefixes_to_textfile(ipasn_dat, out_file_name, orig_mrt_name, debug_write_sets=False):
-    if version_info[0] < 3:
+    if IS_PYTHON2:
         fw = open(out_file_name, 'wt')
     else:
         fw = open(out_file_name, 'wt', encoding='ASCII')
@@ -198,7 +198,7 @@ class MrtTableDump1:
             = unpack('>HHIBBIIHH', buf[:22])
 
         s_prefix = '%d.%d.%d.%d' % (prefix >> 24 & 0xff, prefix >> 16 & 0xff, prefix >> 8 & 0xff, prefix & 0xff)
-        assert s_prefix == inet_ntoa(pack('>I', prefix))  # temp test
+        #assert s_prefix == inet_ntoa(pack('>I', prefix))  # temp test
         self.s_prefix = s_prefix + "/%d" % mask
 
         assert self.view == 0  # view is normally 0; its intended for when an implementation has multiple RIB views
@@ -232,13 +232,9 @@ class MrtTableDump2:
         octets = (mask + 7) // 8
 
         assert sub_type2 == MrtRecord.T2_RIB_IPV4_UNICAST  # only IPv4 support now. For IPv6, parts need change
-        assert 0 <= octets <= 4  # e.g., more octets for ipv6
-        if version_info[0] < 3:
-            # python 2 needs "ord()" to make it bytes -- todo: is there a more elegant solution?
-            s = ".".join([str(ord(b)) for b in buf[5: 5 + octets]])
-        else:
-            s = ".".join([str(b) for b in buf[5: 5 + octets]])
-        s_prefix = {0: '0.0.0.0', 1: s + '.0.0.0', 2: s + '.0.0', 3: s + '.0', 4: s}[octets]
+        assert octets <= 4  # e.g., more octets for ipv6
+        padding = bytes(4-octets) if not IS_PYTHON2 else '\0'*(4-octets)
+        s_prefix = inet_ntoa(buf[5:5+octets] + padding)  # faster than IPv4address class, not sure why
         self.s_prefix = s_prefix + "/%d" % mask
 
         self.entry_count = unpack('>H', buf[5 + octets:7 + octets])[0]
@@ -247,8 +243,8 @@ class MrtTableDump2:
         for i in range(self.entry_count):
             e = self.T2RibEntry(buf)
             self.entries.append(e)
-            buf = buf[len(e):]
             break  # speed optimization - ONLY MAP FIRST; shaves 50% time
+            buf = buf[len(e):]
         #assert not buf  # assert fully parsed; will now fail becasue of break
 
     def __str__(self):
@@ -303,18 +299,13 @@ class BgpAttribute:
         return ext_len
 
     def __init__(self, buf, is32):
-        if version_info[0] < 3:
-            self.flags, self.bgp_type = unpack('>BB', buf[0:2])
-        else:
-            self.flags, self.bgp_type = buf[0], buf[1]  # much faster than unpack
+        self.flags = buf[0] if not IS_PYTHON2 else ord(buf[0])
+        self.bgp_type = buf[1] if not IS_PYTHON2 else ord(buf[1])
         if self._has_ext_len():
             _len = unpack('>H', buf[2:4])[0]
             self.data = buf[4:4 + _len]
         else:
-            if version_info[0] < 3:
-                _len = ord(buf[2])
-            else:
-                _len = buf[2]
+            _len = buf[2] if not IS_PYTHON2 else ord(buf[2])
             self.data = buf[3:3 + _len]
         if self.bgp_type == self.ATTR_AS_PATH:
             self.attr_detail = self.BgpAttrASPath(self.data, is32)
@@ -391,7 +382,8 @@ class BgpAttribute:
             #  stats on 100,000: {1: 1196, 2: 3677845}.
 
             def __init__(self, data, is32):
-                self.seg_type, cnt = unpack('>BB', data[:2])
+                self.seg_type = data[0] if not IS_PYTHON2 else ord(data[0])
+                cnt = data[1] if not IS_PYTHON2 else ord(data[1])
                 data = data[2:]
                 assert self.seg_type in (self.AS_SET, self.AS_SEQUENCE)
                 self.path = []
