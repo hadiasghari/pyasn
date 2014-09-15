@@ -8,7 +8,7 @@ pyasn
    :target: https://pypi.python.org/pypi/pyasn
 
    
-pyasn is a Python extension module that enables you to perform very fast IP address to 
+pyasn is a Python extension module that enables very fast IP address to 
 Autonomous System Number lookups. Current state and Historical lookups can be done, 
 based on the BGP / MRT file used as input. 
 
@@ -24,17 +24,18 @@ This beta release provides support for python 2 and 3. Adds the prefix lookup fu
 improvements and adds unit tests.
 IPv6 support is under construction and will be provided after beta testing is completed.
 
+
 Package Structure
 -----------------
 
-The main portions of the directory tree are as follows: ::
+The main portions of the directory tree are as follows:
 
     .
     ├── pyasn/__init__.py       # Python code of the main pyasn module
     ├── pyasn/pyasn_radix.c     # C extension code (Python RADIX module with bulk load)
     ├── pyasn/_radix/*          # C extension code (Based on original RADIX code from MRTd)
     ├── pyasn/mrtx.py           # python module used to convert MRT files to pyasn DB files
-    ├── pyasn-utils/*.py        # Scripts to convert BGP MRT dumps to IPASN databases
+    ├── pyasn-utils/*.py        # Scripts to download and convert BGP MRT dumps to IPASN databases
     ├── data/                   # Test Resources and some sample DBs to use
     ├── tests/                  # Tests 
     └── setup.py                # Standard setup.py for installation/testing/etc.
@@ -67,7 +68,7 @@ modifications).
     
 Tests are in the ``tests/`` directory and can be run with:
 
-    python setup.py tests
+    python setup.py test
 
 
 Removing pyasn
@@ -75,7 +76,7 @@ Removing pyasn
 
 If you built and installed the package your self use the recorded log to remove the installed files
 Alternatively the installer will install a ``pyasn-1.5`` egg to the ``PYTHONDIR/dist-pacakges`` folder
-and copy 3 utility scripts to ``/usr/local/bin``. Removing the egg and the 3 scripts should completely 
+and copy 2 utility scripts to ``/usr/local/bin``. Removing the egg and the 3 scripts should completely 
 remove your installation of pyasn.
 
 
@@ -120,15 +121,16 @@ pyasn DB files are a long list of CIDRs used to lookup AS number for IPs. An exc
     1.0.128.0/19	9737
     1.0.129.0/24	23969
     ...
-    ...
-    ...
     
 
-pyasn DB files can be direcly downloaded from the pyasn home #TODO:provide a link for download. 
+pyasn DB files can be direcly downloaded and converted to the right format using the utility scripts provided. 
+The following commands demonstrate how to download the latest MRT RIB file and convert it for use with pyasn.
 
-Alternatively you can also create your own historical record by downloading the RIB-MRT dumps 
-from RouteViews, or using the ``pyasn_wget_rib.py`` utility script and convert the dump to a ipasndb 
-with the ``pyasn_convert_rib.py`` file.
+    python pyasn_util_download.py --latest
+    python pyasn_util_convert.py --single <Downloaded RIB File> <ipasn_db_file_name>
+
+**NOTE** These scripts will be installed to ``/usr/local/bin`` and can be executed directly. Alternatively they can also 
+be executed from the sources of a cloned repository.
 
     
 Performance Tips
@@ -155,11 +157,15 @@ See the LICENSE_pyradix_orig file for details.
 
 Contributing
 ------------
+The pyasn package is developed and maintained by researchers at the Economics of Cybersecurity research group
+at Delft Univeristy of Technology (http://econsec.tbm.tudlft.nl). The package is used on an almost daily basis
+and bugs are fixed pretty quickly.  
 
-Please report bugs via GitHub at https://github.com/hadiasghari/pyasn
+The pacakge is largely developed and maintained by Hadi Asghari and Arman Noroozian. Please report any bugs 
+via GitHub at https://github.com/hadiasghari/pyasn or by contacting one of the two developers directly. 
 
 Testing
 -------
 This beta release has been tested under python version 2.6 & 2.7 and 3.4.
 We would appreciate contributions towards testing the pyasn pacakge! 
-Unit Tests are highly appreciated.
+Unit Tests are highly appreciated. 

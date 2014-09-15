@@ -6,8 +6,8 @@ CRITICAL
 * final tests
 * upload to pip
 * update documentation and docstrings
-    * Add thanks to arman + link to our group :)
-    * add how to get latest RIB to documentation
+    * Add thanks to arman + link to our group (done)
+    * add how to get latest RIB to documentation (done)
 
 
 BACKLOG - for NEXT RELEASES
