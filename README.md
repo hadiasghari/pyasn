@@ -50,7 +50,7 @@ Installation is a breeze via pip:
 Or with the standard Python:
 
 	python setup.py build
-	python setup.py install
+	python setup.py install --record log
 	
 You will need to have pip, setuptools and build essentials installed 
 if you build the package manually. On Ubuntu/Debian you will need to 
@@ -70,8 +70,18 @@ Tests are in the ``tests/`` directory and can be run with:
     python setup.py tests
 
 
-Removing OLD Versions
----------------------
+Removing pyasn
+--------------
+
+If you built and installed the package your self use the recorded log to remove the installed files
+Alternatively the installer will install a ``pyasn-1.5`` egg to the ``PYTHONDIR/dist-pacakges`` folder
+and copy 3 utility scripts to ``/usr/local/bin``. Removing the egg and the 3 scripts should completely 
+remove your installation of pyasn.
+
+
+Removing PyASN version 1.2
+--------------------------
+**NOTE:** pyasn v1.5 and v1.2 can be installed side by side. For future releases this will no longer be possible.
 
 To uninstall the old PyASN, delete the following files from your Python installation:
  

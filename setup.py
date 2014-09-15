@@ -24,7 +24,7 @@ reqs = []
 if sys.version_info[0] == 2 and sys.version_info[1] < 7:
     reqs.append('ordereddict')
 
-datafiles = glob.glob('data/*.dat')
+data = glob.glob('data/*.dat')
 utils = glob.glob('pyasn-utils/*.py')
 
 setup(
@@ -48,7 +48,7 @@ setup(
     ],
     keywords='ip asn autonomous system bgp whois prefix radix python routing networking',
     install_requires=reqs,
-    data_files=datafiles,
+    data_files=data,
     scripts=utils,
     setup_requires=[],
     tests_require=['nose', 'coverage'],

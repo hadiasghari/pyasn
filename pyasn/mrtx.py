@@ -35,7 +35,7 @@ Other objects:
 """
 
 from __future__ import print_function, division
-from socket import inet_ntoa
+from socket import inet_ntoa, inet_aton
 from struct import unpack, pack
 from time import time, asctime
 from sys import stderr, version_info
@@ -68,7 +68,7 @@ Both version 1 & 2 TABLE_DUMPS are supported, as well as 32bit ASNs. However, th
         if not mrt.table:
             # skip entry
             if print_progress:
-                print('parse_file(): starting  parse for %s' % mrt)
+                print('parse_mrt_file(): starting  parse for %s' % mrt)
             continue
 
         origin = mrt.as_path.origin_as
@@ -91,25 +91,59 @@ Both version 1 & 2 TABLE_DUMPS are supported, as well as 32bit ASNs. However, th
         if debug_break_after and n > debug_break_after:
             break
         if print_progress and n % 100000 == 0:
-            print('record %d @%.fs' % (n, time() - stime), file=stderr)
+            print('  mrt record %d @%.fs' % (n, time() - stime), file=stderr)
     #
     if '0.0.0.0/0' in results:
         del results['0.0.0.0/0']  # remove default route - can be parameter
     return results
 
 
-def util_dump_prefixes_to_textfile(ipasn_dat, out_file_name, orig_mrt_name, debug_write_sets=False):
+def dump_prefixes_to_text_file(ipasn_data, out_text_file_name, orig_mrt_name, debug_write_sets=False):
     if IS_PYTHON2:
-        fw = open(out_file_name, 'wt')
+        fw = open(out_text_file_name, 'wt')
     else:
-        fw = open(out_file_name, 'wt', encoding='ASCII')
+        fw = open(out_text_file_name, 'wt', encoding='ASCII')
     fw.write('; IP-ASN32-DAT file\n; Original file : %s\n' % orig_mrt_name)
-    fw.write('; Converted on  : %s\n; Prefixes      : %s\n; \n' % (asctime(), len(ipasn_dat)))
-    for prefix, origin in ipasn_dat.items():
+    fw.write('; Converted on  : %s\n; Prefixes      : %s\n; \n' % (asctime(), len(ipasn_data)))
+    for prefix, origin in ipasn_data.items():
         if not debug_write_sets and isinstance(origin, set):
             origin = list(origin)[0]  # get an AS randomly, or the only AS if just one, from the set
         fw.write('%s\t%s\n' % (prefix, origin))
     fw.close()
+
+
+
+def dump_prefixes_to_binary_file(ipasn_data, out_bin_file_name, orig_mrt_name, extra_comments=""):
+    # todo: this funciton needs testing in both python 2, 3, and with the binary-reader
+
+    fw = open(out_bin_file_name, 'wb')
+    # write common header
+    fw.write(str.encode('PYASN'))  # magic header
+    fw.write(b'\x01')  # binary format version 1 - IPv4
+    fw.write(pack('I', 0))  # number of records; will need to be updated at the end.
+
+    # let's store comments and the name of the input file in the binary; good for debugging. max 500 bytes.
+    comments = "Created <%s>, from: %s. Comments: %s" % (asctime(), orig_mrt_name, extra_comments)
+    comments = comments.encode('ASCII', errors='replace')[:499] + b'\0'  # convert to bytes, trim, terminate
+    fw.write(pack('h', len(comments)))
+    fw.write(comments)
+
+    n = 0
+    for prefix, origin in ipasn_data.items():
+        if isinstance(origin, set):
+            origin = list(origin)[0]  # get an AS randomly, or the only AS if just one, from the set
+        network, mask = prefix.split('/')
+        mask = int(mask)
+        fw.write(inet_aton(network))
+        fw.write(pack('B', mask))  # for IPv6: need more bytes here; and IP-family in header
+        fw.write(pack('I', origin))
+        n += 1
+
+    fw.write(bytes(9))  # write one terminating zero record
+    fw.seek(6)
+    fw.write(pack('I', n))     # update number of records at start of file.
+    fw.close()
+
 
     
 #####################################################################

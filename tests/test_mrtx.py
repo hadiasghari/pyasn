@@ -136,7 +136,7 @@ class ConvertMRTFile(TestCase):
         f.close()
 
         # test of write-output
-        util_dump_prefixes_to_textfile(converted, TMP_IPASN_PATH, RIB_FULLDUMP_PATH, debug_write_sets=True)
+        dump_prefixes_to_text_file(converted, TMP_IPASN_PATH, RIB_FULLDUMP_PATH, debug_write_sets=True)
 
         # tests of comparing with v 1.2: load it, then compare
         # an alternative option is to run a linux DIFF comppand between TMP_IPASN_PATH & IPASN_DB_PATH

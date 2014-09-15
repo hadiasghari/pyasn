@@ -37,16 +37,25 @@ from datetime import datetime, timedelta
 
 print('MRT RIB log importer v1.5')
 
-if len(argv) != 4 or argv[1] not in ('--single', '--bulk'):
-    print('Usage:  pyasn_convert_rib.py  [--single  ribdump.bz2  ipasn.dat] | [--bulk START_DATE  END_DATE]')
+if len(argv) not in (4, 5) or argv[1] not in ('--single', '--bulk'):
+    # todo: rewrite using argparse
+    print('Usage:  pyasn_convert_rib.py  --single  ribdump.bz2  ipasn.dat(.bin) [--binary]')
+    print('        pyasn_convert_rib.py  --bulk START_DATE  END_DATE [--binary]')
     print('\n        This script converts MRT/RIB export (downloadable from RouteViews or RIPE RIS) to IPASN-databases')
     print('          For bulk mode, dates should be in yyyy-mm-dd format, and files saved into current folder.')
+    print('          Use the binary switch to save the output in binary format.')
     exit()
 
+binary_output = '--binary' in argv
+
 if argv[1] == '--single':
-    with bz2.BZ2File(argv[2], 'rb') as f:    
-        dat = mrtx.parse_file(f)
-    mrtx.util_dump_prefixes_to_textfile(dat, argv[3], argv[2])
+    f = bz2.BZ2File(argv[2], 'rb')
+    dat = mrtx.parse_mrt_file(f, print_progress=True)
+    f.close()
+    if not binary_output:
+        mrtx.dump_prefixes_to_text_file(dat, argv[3], argv[2])
+    else:
+        mrtx.dump_prefixes_to_binary_file(dat, argv[3], argv[2])
     print('IPASN database saved (%d prefixes)' % len(dat))
     exit()
 
@@ -70,11 +79,16 @@ while dt <= dt_end:
     if len(files) > 1:
         print("warning: multiple files on %s, only converting first." % dt)
     dump_file = files[0]
-    with bz2.BZ2File(dump_file, 'rb') as f:
-        print("%s... " % dump_file[4:-4])
-        dat = mrtx.parse_file(f)
-    out_file = 'ipasn_%d%02d%02d.dat' % (dt.year, dt.month, dt.day)
-    mrtx.util_dump_prefixes_to_textfile(dat, out_file, dump_file)
+    f = bz2.BZ2File(dump_file, 'rb')
+    print("%s... " % dump_file[4:-4])
+    dat = mrtx.parse_mrt_file(f)
+    f.close()
+    if not binary_output:
+        out_file = 'ipasn_%d%02d%02d.dat' % (dt.year, dt.month, dt.day)
+        mrtx.dump_prefixes_to_text_file(dat, out_file, dump_file)
+    else:
+        out_file = 'ipasn_%d%02d%02d.bin' % (dt.year, dt.month, dt.day)
+        mrtx.dump_prefixes_to_binary_file(dat, out_file, dump_file)
     dt += timedelta(1)
 
 print('Finished!')
