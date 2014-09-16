@@ -1,6 +1,7 @@
 # checked the DAT files; pyasn worked correctly
 # checked MRT/RIB-converter for these ranges; with the latest changes, same response
-#   (could still be related to multiple TD entries, or different routeview points)
+#   (can't also be due to multiple TD entries, as these are non-existant prefixes, not different ones
+#    leaves only possibility different routeview / bgp-routing point of views - to check)
 
 # # not sure why we don't have these in the DAT, but we don't.
 104.135.25.154  > cymru:  36384, pyasn:   None
