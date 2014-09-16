@@ -73,6 +73,9 @@ Tests are in the ``tests/`` directory and can be run with:
 
 Removing pyasn
 --------------
+You can remove pyasn as follows
+
+    pip uninstall pyasn
 
 If you built and installed the package your self use the recorded log to remove the installed files
 Alternatively the installer will install a ``pyasn-1.5`` egg to the ``PYTHONDIR/dist-pacakges`` folder
