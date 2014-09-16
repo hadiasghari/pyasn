@@ -71,26 +71,23 @@ Both version 1 & 2 TABLE_DUMPS are supported, as well as 32bit ASNs. However, th
                 print('parse_mrt_file(): starting  parse for %s' % mrt)
             continue
 
-        origin = mrt.as_path.origin_as
         # important change from pyasn_converter 1.2"
         #   in 1.2, we ignored origins of as_paths ending in as_set (with one AS - quite common - or multiple )
         #   as well as origins of as_paths with more than three segments (very few)
         #   this was a silly bug as these prefixes would not be saved (impact: 129 of 513000 prefixes for 2014-05-23)
 
         if mrt.prefix not in results:
-            results[mrt.prefix] = origin
+            results[mrt.prefix] = mrt.as_path.origin_as
         else:
             assert mrt.type == mrt.TYPE_TABLE_DUMP
-            # in type2, no prefix appears twice. (probably because we use *only entry 0 of records* -- is this ok?)
-            # in type1, they do, "but we are only interested in getting the first match" (quote from asn v1.2)
-            #           what happens if not equal? perhaps even one ASN-set, one a specific ASN...
-            if results[mrt.prefix] != origin:
-                pass
+            # in TD2, no prefix appears twice. (probably because we use *only entry 0 of records* -- is this ok?)
+            # in TD1, they do, "but we are only interested in getting the first match" (quote from asn v1.2)
+            #          for one TD1 dump checked: all duplicate prefixes had same origin (don't always compare for speed)
 
         n += 1
         if debug_break_after and n > debug_break_after:
             break
-        if print_progress and n % 100000 == 0:
+        if print_progress and n % (100000 if mrt.type == mrt.TYPE_TABLE_DUMP_V2 else 500000) == 0:
             print('  mrt record %d @%.fs' % (n, time() - stime), file=stderr)
     #
     if '0.0.0.0/0' in results:
@@ -218,7 +215,7 @@ class MrtRecord:
         for a in attrs:
             if a.bgp_type == BgpAttribute.ATTR_AS_PATH:
                 assert not path  # only one as-path attribute in each entry
-                path = a.attr_detail
+                path = a.path_detail()
         assert path
         return path
 
@@ -231,13 +228,12 @@ class MrtTableDump1:
         self.view, self.seq, prefix, mask, self.status, self.orig_ts, self.peer_ip, self.peer_as, self.attr_len\
             = unpack('>HHIBBIIHH', buf[:22])
 
-        s_prefix = '%d.%d.%d.%d' % (prefix >> 24 & 0xff, prefix >> 16 & 0xff, prefix >> 8 & 0xff, prefix & 0xff)
-        #assert s_prefix == inet_ntoa(pack('>I', prefix))  # temp test
+        s_prefix = inet_ntoa(pack('>I', prefix))
         self.s_prefix = s_prefix + "/%d" % mask
 
         assert self.view == 0  # view is normally 0; its intended for when an implementation has multiple RIB views
-        # The BGP Attribute field contains the BGP attribute information for the RIB entry.
 
+        # The BGP Attribute field contains the BGP attribute information for the RIB entry.
         buf = buf[22:]
         self.attrs = []
         j = self.attr_len
@@ -248,7 +244,7 @@ class MrtTableDump1:
             j -= len(a)
             #if a.bgp_type == BgpAttribute.ATTR_AS_PATH:
             #    break  # speed optimization: we can stop parsing other attributes after ASPATH
-        assert not j and not buf  # make sure all data is used
+        assert not j and not buf  # make sure all data is used -- needs to be commented if above optimization on
 
     def __str__(self):
         return 'MrtTableDump1 {seq:%d, prefix:%s + sole entry [attr-len:%d, peer:%d, orig-ts:%d]}' % \
@@ -335,20 +331,27 @@ class BgpAttribute:
     def __init__(self, buf, is32):
         self.flags = buf[0] if not IS_PYTHON2 else ord(buf[0])
         self.bgp_type = buf[1] if not IS_PYTHON2 else ord(buf[1])
+        self._is32 = is32
+        self._detail = None
         if self._has_ext_len():
             _len = unpack('>H', buf[2:4])[0]
             self.data = buf[4:4 + _len]
         else:
             _len = buf[2] if not IS_PYTHON2 else ord(buf[2])
             self.data = buf[3:3 + _len]
-        if self.bgp_type == self.ATTR_AS_PATH:
-            self.attr_detail = self.BgpAttrASPath(self.data, is32)
-    
+
     def __len__(self):
         return 2 + (2 if self._has_ext_len() else 1) + len(self.data)
 
     def __str__(self):
         return 'BGPAttribute {type:%d, flags:%d, len(data):%d}' % (self.bgp_type, self.flags, len(self.data))
+
+    def path_detail(self):
+        assert self.bgp_type == self.ATTR_AS_PATH
+        if not self._detail:  # lazy conversion on request; speeds up TD1 parse by 20%
+            self._detail = self.BgpAttrASPath(self.data, self._is32)
+        return self._detail
+
 
     class BgpAttrASPath:
         # An AS_PATH has routing path information represented as ordered AS_SEQUENCEs and unordered AS_SETs.

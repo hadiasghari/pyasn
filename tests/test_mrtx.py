@@ -25,11 +25,14 @@ import bz2
 from os import path
 import logging
 
-IPASN_DB_PATH = path.join(path.dirname(__file__), "../data/ipasn_20140513.dat")
-RIB_FULLDUMP_PATH = path.join(path.dirname(__file__), "../data/rib.20140513.0600.bz2")
-RIB_PARTDUMP_PATH = path.join(path.dirname(__file__), "../data/rib.20140523.0600_firstMB.bz2")
-TMP_IPASN_PATH = path.join(path.dirname(__file__), "ipasn_test_dat.tmp")
-# logger = logging.getLogger()
+RIB_TD1_PARTDUMP_PATH = path.join(path.dirname(__file__), "../data/rib.20080501.0644_firstMB.bz2")
+RIB_TD2_PARTDUMP_PATH = path.join(path.dirname(__file__), "../data/rib.20140523.0600_firstMB.bz2")
+RIB_TD1_FULLDUMP_PATH = path.join(path.dirname(__file__), "../data/rib.20080501.0644.bz2")
+RIB_TD2_FULLDUMP_PATH = path.join(path.dirname(__file__), "../data/rib.20140513.0600.bz2")
+IPASN_TD1_DB_PATH = path.join(path.dirname(__file__), "../data/ipasn_20080501_v12.dat")
+IPASN_TD2_DB_PATH = path.join(path.dirname(__file__), "../data/ipasn_20140513_v12.dat")
+TMP_TD1_IPASN_PATH = path.join(path.dirname(__file__), "ipasn_td1_test_dat.tmp")
+TMP_TD2_IPASN_PATH = path.join(path.dirname(__file__), "ipasn_td2_test_dat.tmp")
 
 
 class ConvertMRTFile(TestCase):
@@ -37,7 +40,7 @@ class ConvertMRTFile(TestCase):
         """
             Tests pyasn.mrtx internal classes by converting start of an RIB TDV2 file
         """
-        f = bz2.BZ2File(RIB_PARTDUMP_PATH, 'rb')
+        f = bz2.BZ2File(RIB_TD2_PARTDUMP_PATH, 'rb')
 
         # first record: TDV2 (13), PEERIX (1)
         mrt = MrtRecord.next_dump_table_record(f)
@@ -67,8 +70,8 @@ class ConvertMRTFile(TestCase):
         attr = entry.attrs[1]
         self.assertEqual(attr.flags, 80)
         self.assertEqual(len(attr.data), 14)
-        self.assertTrue(isinstance(attr.attr_detail, BgpAttribute.BgpAttrASPath))
-        aspath = attr.attr_detail
+        self.assertTrue(isinstance(attr.path_detail(), BgpAttribute.BgpAttrASPath))
+        aspath = attr.path_detail()
         self.assertEqual(len(aspath.pathsegs), 1)
         self.assertEqual(str(aspath.pathsegs[0]), "[2905, 65023, 16637]")
         self.assertEqual(aspath.origin_as, 16637)
@@ -89,8 +92,8 @@ class ConvertMRTFile(TestCase):
         attr = entry.attrs[1]
         self.assertEqual(attr.flags, 80)
         self.assertEqual(len(attr.data), 14)
-        self.assertTrue(isinstance(attr.attr_detail, BgpAttribute.BgpAttrASPath))
-        aspath = attr.attr_detail
+        self.assertTrue(isinstance(attr.path_detail(), BgpAttribute.BgpAttrASPath))
+        aspath = attr.path_detail()
         self.assertEqual(len(aspath.pathsegs), 1)
         self.assertEqual(str(aspath.pathsegs[0]), "[701, 6453, 15169]")
         self.assertEqual(aspath.origin_as, 15169)
@@ -107,10 +110,10 @@ class ConvertMRTFile(TestCase):
                           '5.128.0.0/14': set([50923]),
                           '5.128.0.0/16': 31200}
 
-        for n in range(2, 9000):
+        for seq in range(2, 9000):
             mrt = MrtRecord.next_dump_table_record(f)
             self.assertTrue(isinstance(mrt.table, MrtTableDump2))
-            self.assertEqual(mrt.table_seq, n)
+            self.assertEqual(mrt.table_seq, seq)
             self.assertTrue(mrt.as_path is not None)
             prefix = mrt.prefix
             origin = mrt.as_path.origin_as
@@ -119,29 +122,112 @@ class ConvertMRTFile(TestCase):
                 self.assertEqual(assert_results[prefix], origin, "error in origin for prefix: %s" % prefix)
 
 
-    # todo: same as above, but with an MRT file from 2008
-    # def test_mrt_table_dump_v1(self):
-    #    """Tests pyasn.mrtx internal classes by converting start of an RIB TDV1 file"""
+    def test_mrt_table_dump_v1(self):
+        """
+            Tests pyasn.mrtx internal classes by converting start of an RIB TDV1 file
+        """
+        f = bz2.BZ2File(RIB_TD1_PARTDUMP_PATH, 'rb')
 
-    def test_converter_full(self):
+        # first record: TDV1 (10). prefix "0.0.0.0/0"
+        mrt = MrtRecord.next_dump_table_record(f)
+        self.assertEqual(mrt.type, MrtRecord.TYPE_TABLE_DUMP)
+        self.assertEqual(mrt.sub_type, MrtRecord.T1_AFI_IPv4)
+        self.assertEqual(mrt.ts, 1209624298)
+        self.assertEqual(mrt.data_len, 42)
+        self.assertTrue(isinstance(mrt.table, MrtTableDump1))
+        self.assertEqual(mrt.table_seq, 0)
+        self.assertEqual(mrt.prefix, "0.0.0.0/0")
+        self.assertEqual(mrt.table.attr_len, 20)
+        self.assertEqual(mrt.table.peer_as, 11686)
+        self.assertEqual(mrt.table.orig_ts, 1209453195)
+        self.assertEqual(len(mrt.table.attrs), 3)
+        self.assertEqual(mrt.table.attrs[0].bgp_type, 1)
+        self.assertEqual(mrt.table.attrs[1].bgp_type, BgpAttribute.ATTR_AS_PATH)
+        attr = mrt.table.attrs[1]
+        self.assertEqual(attr.flags, 64)
+        self.assertEqual(len(attr.data), 6)
+        self.assertTrue(isinstance(attr.path_detail(), BgpAttribute.BgpAttrASPath))
+        aspath = attr.path_detail()
+        self.assertEqual(len(aspath.pathsegs), 1)
+        self.assertEqual(str(aspath.pathsegs[0]), "[11686, 3561]")
+        self.assertEqual(aspath.origin_as, 3561)
+        self.assertEqual(mrt.as_path, aspath)
+
+        # second, then third record -
+        mrt = MrtRecord.next_dump_table_record(f)
+        self.assertTrue(isinstance(mrt.table, MrtTableDump1))
+        self.assertEqual(mrt.table_seq, 1)
+        self.assertEqual(mrt.prefix, "0.0.0.0/0")
+
+        mrt = MrtRecord.next_dump_table_record(f)
+        self.assertTrue(isinstance(mrt.table, MrtTableDump1))
+        self.assertEqual(mrt.table_seq, 2)
+        self.assertEqual(mrt.prefix, "3.0.0.0/8")
+        self.assertEqual(mrt.table.attr_len, 67)
+        self.assertEqual(mrt.table.peer_as, 13237)
+        self.assertEqual(mrt.table.attrs[0].bgp_type, 1)
+        self.assertEqual(mrt.table.attrs[1].bgp_type, BgpAttribute.ATTR_AS_PATH)
+        attr = mrt.table.attrs[1]
+        self.assertEqual(attr.flags, 64)
+        self.assertEqual(len(attr.data), 14)
+        self.assertTrue(isinstance(attr.path_detail(), BgpAttribute.BgpAttrASPath))
+        aspath = attr.path_detail()
+        self.assertEqual(len(aspath.pathsegs), 1)
+        self.assertEqual(str(aspath.pathsegs[0]), "[13237, 3320, 1239, 701, 703, 80]")
+        self.assertEqual(aspath.origin_as, 80)
+        self.assertEqual(mrt.as_path, aspath)
+
+        assert_results = {
+            '3.0.0.0/8': 80,
+            '4.79.181.0/24': 14780,
+            '6.9.0.0/20': 668,
+            '8.2.118.0/23': 13909,
+            '8.3.52.0/23': 26759,
+            '8.4.96.0/20': 15162,
+            '8.6.48.0/21': 36492,
+            '8.7.81.0/24': 25741,
+            '8.7.232.0/24': 13909,
+            }
+        for seq in range(3, 9000):
+            mrt = MrtRecord.next_dump_table_record(f)
+            self.assertTrue(isinstance(mrt.table, MrtTableDump1))
+            self.assertEqual(mrt.table_seq, seq)
+            self.assertTrue(mrt.as_path is not None)
+            prefix = mrt.prefix
+            origin = mrt.as_path.origin_as
+            self.assertTrue(origin)  # an integer or set!
+            if prefix in assert_results:
+                self.assertEqual(assert_results[prefix], origin, "error in origin for prefix: %s" % prefix)
+
+    def test_converter_full_v2(self):
         """
             Tests pyasn.mrtx.parse_mrt_file() - converts a full (TD2) RIB file, and compares results with pyasn v1.2
         """
-        if not path.isfile(RIB_FULLDUMP_PATH):
-            print("skip test, full rib dump doesn't exist... ", file=stderr, end='')
+        self.dotest_converter_full(RIB_TD2_FULLDUMP_PATH, TMP_TD2_IPASN_PATH, IPASN_TD2_DB_PATH)
+
+    def test_converter_full_v1(self):
+        """
+            Tests pyasn.mrtx.parse_mrt_file() - converts a full (TD1) RIB file, and compares results with pyasn v1.2
+        """
+        self.dotest_converter_full(RIB_TD1_FULLDUMP_PATH, TMP_TD1_IPASN_PATH, IPASN_TD1_DB_PATH)
+
+    def dotest_converter_full(self, full_ribdump_path, temp_ipasn_path, ipasn_db_path):
+        # internal method called by both test_converter_full_v1 & test_converter_full_v2
+        if not path.isfile(full_ribdump_path):
+            print("skipped, full dump doesn't exist .. ", file=stderr, end='')
             return
 
-        f = bz2.BZ2File(RIB_FULLDUMP_PATH, 'rb')
+        f = bz2.BZ2File(full_ribdump_path, 'rb')
         converted = parse_mrt_file(f, print_progress=True, debug_break_after=None)
         f.close()
 
         # test of write-output
-        dump_prefixes_to_text_file(converted, TMP_IPASN_PATH, RIB_FULLDUMP_PATH, debug_write_sets=True)
+        dump_prefixes_to_text_file(converted, temp_ipasn_path, full_ribdump_path, debug_write_sets=True)
 
         # tests of comparing with v 1.2: load it, then compare
         # an alternative option is to run a linux DIFF comppand between TMP_IPASN_PATH & IPASN_DB_PATH
         ipasndat_v12 = {}
-        with open(IPASN_DB_PATH, 'rt') as f:
+        with open(ipasn_db_path, 'rt') as f:
             for s in f:
                 if s[0] == '#' or s[0] == '\n' or s[0] == ';':
                     continue
