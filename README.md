@@ -126,11 +126,13 @@ pyasn DB files are a long list of CIDRs used to lookup AS number for IPs. An exc
 pyasn DB files can be direcly downloaded and converted to the right format using the utility scripts provided. 
 The following commands demonstrate how to download the latest MRT RIB file and convert it for use with pyasn.
 
-    python pyasn_util_download.py --latest
-    python pyasn_util_convert.py --single <Downloaded RIB File> <ipasn_db_file_name>
+    ./pyasn_util_download.py --latest
+    ./pyasn_util_convert.py --single <Downloaded RIB File> <ipasn_db_file_name>
 
 **NOTE** These scripts will be installed to ``/usr/local/bin`` and can be executed directly. Alternatively they can also 
-be executed from the sources of a cloned repository.
+be executed from the sources of a cloned repository. If you did you installed the package to a user directory, these
+scripts will not be on the path and you will have to invoke them by navigating to the folder in which they have
+been copied.
 
     
 Performance Tips
