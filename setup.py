@@ -34,7 +34,7 @@ setup(
     maintainer='Hadi Asghari',
     maintainer_email='hd.asghari@gmail.com',
     url='https://github.com/hadiasghari/pyasn',
-    description='Python IP address to Autonomous System Number lookup module.',
+    description='Offline IP address to Autonomous System Number lookup module.',
     long_description=README,
     license='MIT',
     classifiers=[
@@ -54,6 +54,7 @@ setup(
     setup_requires=[],
     tests_require=['nose', 'coverage'],
     packages=find_packages(exclude=['tests', 'tests.*']),
+    zip_safe=False,
     test_suite='nose.collector',
     **extra_kwargs
 )
