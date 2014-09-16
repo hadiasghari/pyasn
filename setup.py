@@ -1,4 +1,6 @@
 from __future__ import print_function
+import ez_setup
+ez_setup.use_setuptools()
 import codecs
 import sys
 import platform
