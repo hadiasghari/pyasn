@@ -68,13 +68,14 @@ for dt in dates_to_get:
     http.close()
     str_find = 'rib.%d%02d%02d' % (dt.year, dt.month, dt.day)
 
-    ix = html.find(str_find + '.06')
+    ix = html.find(str_find + '.06')  # get the file saved at 6 AM for consistency
     if ix == -1:
-        ix = html.find(str_find + '.05')
-        #assert ix != -1
+        ix = html.find(str_find + '.05')  # if not, try 5 AM
         if ix == -1:
-            print(str(dt) + '\tERROR - NOT FOUND')
-            continue
+            ix = html.find(str_find + '.00')  # last resort, try the one saved at midnight
+            if ix == -1:
+                print(str(dt) + '\tERROR - NOT FOUND')
+                continue
 
     fname = html[ix:ix+21]
     s = html[ix+80:ix+150]

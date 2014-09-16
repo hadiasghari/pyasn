@@ -1,6 +1,5 @@
 pyasn
 ========
-
 .. image:: https://pypip.in/v/pyasn/badge.png
    :target: https://pypi.python.org/pypi/pyasn
     
@@ -13,40 +12,28 @@ Autonomous System Number lookups. Current state and Historical lookups can be do
 based on the BGP / MRT file used as input. 
 
 pyasn is different from other as/asn lookup tools in that it providers offline historical lookups.
-It providers utility scripts for users to build their own offline historical DBs based on the BGP /MRT
+It provides utility scripts for users to build their own offline historical DBs based on the BGP/MRT
 files. This will make pyasn much faster than online dig/whois/json lookups.
 
-The module code is written in C and cross-compiles on both Windows (MSVC) and Linux.   
-Underneath it uses a RADIX tree data structure for storage of IP addresses. 
+The module code is written in C and Python and cross-compiles on both Linux and Windows.   
+Underneath, it uses a RADIX tree data structure for storage of IP addresses. 
 In the current version, it borrows code from py-radix to support both IPv4 and IPv6 network prefixes.
  
-This beta release provides support for python 2 and 3. Adds the prefix lookup functionality, some performance
-improvements and adds unit tests.
-IPv6 support is under construction and will be provided after beta testing is completed.
+This beta release provides support for python 2 and 3. It also adds new functionality, performance
+improvements and adds unit testing. IPv6 support is under construction and will be provided after 
+beta testing is completed.
 
-
-Package Structure
------------------
-
-The main portions of the directory tree are as follows:
-
-    .
-    ├── pyasn/__init__.py       # Python code of the main pyasn module
-    ├── pyasn/pyasn_radix.c     # C extension code (Python RADIX module with bulk load)
-    ├── pyasn/_radix/*          # C extension code (Based on original RADIX code from MRTd)
-    ├── pyasn/mrtx.py           # python module used to convert MRT files to pyasn DB files
-    ├── pyasn-utils/*.py        # Scripts to download and convert BGP MRT dumps to IPASN databases
-    ├── data/                   # Test Resources and some sample DBs to use
-    ├── tests/                  # Tests 
-    └── setup.py                # Standard setup.py for installation/testing/etc.
+pyasn is developed and maintained by researchers at the Economics of Cybersecurity research group at Delft 
+University of Technology (http://econsec.tbm.tudlft.nl). The package is used on an almost daily basis
+and bugs are fixed pretty quickly.  The package is largely developed and maintained by Hadi Asghari and Arman 
+Noroozian. Please report any bugs via GitHub (https://github.com/hadiasghari/pyasn) or email the developers. 
 
 
 Installation
 ------------
-
 Installation is a breeze via pip:
 
-    pip install pyasn
+    pip install pyasn --pre
 
 Or with the standard Python:
 
@@ -54,48 +41,19 @@ Or with the standard Python:
 	python setup.py install --record log
 	
 You will need to have pip, setuptools and build essentials installed 
-if you build the package manually. On Ubuntu/Debian you will need to 
-run the following command:
+if you build the package manually. On Ubuntu/Debian you can get them 
+using the following command:
 
     sudo apt-get install python-pip python-dev build-essential
 	
 
-Building the C module on Windows requires Microsoft Visual Studio 2010 to be installed.
-(It's easiest to use the same Visual Studio version as the on used to build your Python binaries; 
-VS Express versions work fine. Older/newer versions, as well as Cygwin or Anaconda work with minor
-modifications).
+Building the C module on Windows requires Microsoft Visual Studio 2010. In general, it's easiest 
+to build modules using the same Visual Studio version that was used to build the installed Python binaries; 
+Other versions of Visual Studio, as well as MinGW on Cygwin or Anaconda work with minor modifications.
 
     
-Tests are in the ``tests/`` directory and can be run with:
-
-    python setup.py test
-
-
-Removing pyasn
---------------
-You can remove pyasn as follows
-
-    pip uninstall pyasn
-
-If you built and installed the package your self use the recorded log to remove the installed files
-Alternatively the installer will install a ``pyasn-1.5`` egg to the ``PYTHONDIR/dist-pacakges`` folder
-and copy 2 utility scripts to ``/usr/local/bin``. Removing the egg and the 3 scripts should completely 
-remove your installation of pyasn.
-
-
-Removing PyASN version 1.2
---------------------------
-**NOTE:** pyasn v1.5 and v1.2 can be installed side by side. For future releases this will no longer be possible.
-
-To uninstall the old PyASN, delete the following files from your Python installation:
- 
-    PYTHONDIR/dist-packages/PyASN.so
-    PYTHONDIR/dist-packages/PyASN-1.2.egg-info
-
-
 Usage
 -----
-
 A simple example that demonstrates most of the features: ::
 
 	import pyasn
@@ -107,11 +65,10 @@ A simple example that demonstrates most of the features: ::
 	asndb.lookup_asn('8.8.8.8')
     # should return: (15169, '8.8.8.0/24')
     
-
-
-pyasn DB files
---------------
-pyasn DB files are a long list of CIDRs used to lookup AS number for IPs. An excerpt from a pyasn db file looks like this:
+    
+IPASN data files
+----------------
+IPASN data files are a long list of CIDRs used to lookup AS number for IPs. An excerpt from such a file looks like this:
 
     ; IP-ASN32-DAT file
     ; Original file : <Path to a rib file>
@@ -125,52 +82,85 @@ pyasn DB files are a long list of CIDRs used to lookup AS number for IPs. An exc
     1.0.129.0/24	23969
     ...
     
+IPASN data files can be created by downloading BGP/MRT dumps from Routeviews, and converting them. This can be done
+very easily using provided utility scripts, as follows:
 
-pyasn DB files can be direcly downloaded and converted to the right format using the utility scripts provided. 
-The following commands demonstrate how to download the latest MRT RIB file and convert it for use with pyasn.
+    pyasn_util_download.py --latest
+    pyasn_util_convert.py --single <Downloaded RIB File> <ipasn_db_file_name>
 
-    ./pyasn_util_download.py --latest
-    ./pyasn_util_convert.py --single <Downloaded RIB File> <ipasn_db_file_name>
+**NOTE** These scripts are by default installed to ``/usr/local/bin`` and can be executed directly. If you installed 
+the package to a user directory, these scripts will not be on the path and you will have to invoke them by navigating 
+to the folder in which they have been copied (e.g. ~/.local/bin).
 
-**NOTE** These scripts will be installed to ``/usr/local/bin`` and can be executed directly. Alternatively they can also 
-be executed from the sources of a cloned repository. If you did you installed the package to a user directory, these
-scripts will not be on the path and you will have to invoke them by navigating to the folder in which they have
-been copied.
+Alternatively, we provide download links to a large number of already generated IPASN data files. They are weekly
+snapshots of the Routeviews data, from 2006 onwards. You can download and directly use these from: [TODO-LINK]
 
-    
-Performance Tips
-----------------
-Loading of a pyasn db file is the most heavy operation of the package. For fast lookups using different 
-multiple pyasn db files (e.g. historical lookups from multiple dates) we recommend caching of loaded 
+
+Performance Tip
+---------------
+Initial loading of a IPASN data file is the most heavy operation of the package. For fast lookups using 
+multiple IPASN data files, for instance for historical lookups on multiple dates, we recommend caching of loaded 
 db files for better performance.
  
-Alternatively you can also convert the dbs files to binary format and load them using the binary load option
-which improves db load time (beta testing). You can convert db files to binary format using the ``pyasn_dat_to_bin.py`` 
-utility script 
-
-License
--------
-
-pyasn is licensed under a MIT license.
-
-It extends code from py-radix (Michael J. Schultz and Damien Miller), 
-most notably lowering memory usage and adding a bulk prefix/asn load.
-The underlying radix tree implementation is taken (and modified) from MRTd.
-These are all subject to BSD licenses. 
-See the LICENSE_pyradix_orig file for details.
+Alternatively, you can convert the IPASN data files to binary format and load them using the binary load option
+to improve load time (in beta testing). You can save files to binary format using the ``--binary``  of the utility script 
 
 
-Contributing
-------------
-The pyasn package is developed and maintained by researchers at the Economics of Cybersecurity research group
-at Delft Univeristy of Technology (http://econsec.tbm.tudlft.nl). The package is used on an almost daily basis
-and bugs are fixed pretty quickly.  
+Uninstalling pyasn
+------------------
+You can remove pyasn as follows
 
-The pacakge is largely developed and maintained by Hadi Asghari and Arman Noroozian. Please report any bugs 
-via GitHub at https://github.com/hadiasghari/pyasn or by contacting one of the two developers directly. 
+    pip uninstall pyasn
 
-Testing
--------
+If you built and installed the package your self use the recorded log to remove the installed files
+Alternatively the installer will install a ``pyasn-1.5`` egg to the ``PYTHONDIR/dist-pacakges`` folder
+and copy 2 utility scripts to ``/usr/local/bin``. Removing the egg and the 3 scripts should completely 
+remove your installation of pyasn.
+
+
+**Removing PyASN version 1.2**: pyasn v1.5 and v1.2 can be installed side by side (due to lower-cased package name). 
+To avoid mistakes, you can uninstall the old **PyASN** by deleting the following files from your Python installation:
+ 
+    PYTHONDIR/dist-packages/PyASN.so
+    PYTHONDIR/dist-packages/PyASN-1.2.egg-info
+
+
+
+Package Structure
+-----------------
+The main portions of the directory tree are as follows:
+
+    .
+    ├── pyasn/__init__.py       # Python code of the main pyasn module
+    ├── pyasn/pyasn_radix.c     # C extension code (Python RADIX module with bulk load)
+    ├── pyasn/_radix/*          # C extension code (Based on original RADIX code from MRTd)
+    ├── pyasn/mrtx.py           # python module used to convert MRT files to pyasn DB files
+    ├── pyasn-utils/*.py        # Scripts to download and convert BGP MRT dumps to IPASN databases
+    ├── data/                   # Test Resources and some sample DBs to use
+    ├── tests/                  # Tests 
+    └── setup.py                # Standard setup.py for installation/testing/etc.
+
+
+Testing pyasn Sources
+-------------------------
+A limited number of unit tests are provided in the ``tests/`` directory when downlading the sources
+These can be run with the following command:
+
+    python setup.py test
+
 This beta release has been tested under python version 2.6, 2.7, 3.3 and 3.4.
 We would appreciate contributions towards testing the pyasn pacakge! 
 Unit Tests are highly appreciated. 
+
+
+License & Acknowledgments
+-------------------------
+pyasn is licensed under the MIT license.
+
+It extends code from py-radix (Michael J. Schultz and Damien Miller),  and improves upon it in several ways, 
+for instance lowering memory usage and adding a bulk prefix/asn load.
+The underlying radix tree implementation is taken (and modified) from MRTd.
+These are all subject to their respective licenses.  (See the LICENSE file for details.)
+
+Thanks to Dr. Chris Lee (of Shadowserver) for proposing the use of radix trees. 
+
