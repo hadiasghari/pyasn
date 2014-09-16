@@ -15,11 +15,11 @@ FOR RC STATUS:
 * implement as name lookup
 * test binary ipasn db load and usage
 * understand difference with cymru whois lookup
-    * hopefully solved by new MRTX changes? (how much has the latest changes made a difference?)
-    * test with RIPE RIS too! (http://www.ripe.net/data-tools/stats/ris/ris-raw-data)
-    * understand the nature of multiple entries in RIB. we use only first.
+    * the difference is not solved by MRTX fixes.
+    * test with RIPE RIS (http://www.ripe.net/data-tools/stats/ris/ris-raw-data) -- different views most likely cause
+    * understand nature of multiple entries in MRT-records. we use only first.
+      (actually all have same origin in TD1 test, so this shouldn't be it either)
 * test for windows
-* mrtx:  test on old conversion too (hadi)
 * ipv6 support:
 		(a) test radix - manually add/delete?
 		(b) mrtx code would need it to be added - marked in code
