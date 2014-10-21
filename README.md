@@ -61,7 +61,7 @@ A simple example that demonstrates most of the features: ::
     # should return: (15169, '8.8.8.0/24'), the origin AS, and the BGP prefix it matches
     
     asndb.get_as_prefixes(1128)
-    # returns ['130.161.0.0/16', '131.180.0.0/16', '145.94.0.0/16'], advertised prefixes of TU-Delft
+    # returns ['130.161.0.0/16', '131.180.0.0/16', '145.94.0.0/16'], TU-Delft prefixes
 
 
 IPASN Data Files
@@ -130,7 +130,7 @@ The main portions of the directory tree are as follows: ::
     ├── pyasn/pyasn_radix.c     # C extension code (Python RADIX module with bulk load)
     ├── pyasn/_radix/*          # C extension code (Based on original RADIX code from MRTd)
     ├── pyasn/mrtx.py           # python module used to convert MRT files to pyasn DB files
-    ├── pyasn-utils/*.py        # Scripts to download and convert BGP MRT dumps to IPASN databases
+    ├── pyasn-utils/*.py        # Scripts to download & convert BGP MRT dumps to IPASN databases
     ├── data/                   # Test Resources and some sample DBs to use
     ├── tests/                  # Tests
     └── setup.py                # Standard setup.py for installation/testing/etc.
