@@ -77,7 +77,11 @@ Both version 1 & 2 TABLE_DUMPS are supported, as well as 32bit ASNs. However, th
         #   this was a silly bug as these prefixes would not be saved (impact: 129 of 513000 prefixes for 2014-05-23)
 
         if mrt.prefix not in results:
-            results[mrt.prefix] = mrt.as_path.origin_as
+            try:
+                results[mrt.prefix] = mrt.as_path.origin_as
+            except:
+                print("  Error parsing prefix '%s'" % (mrt.prefix))  # to aid debugging, print prefix raising exception
+                raise
         else:
             assert mrt.type == mrt.TYPE_TABLE_DUMP
             # in TD2, no prefix appears twice. (probably because we use *only entry 0 of records* -- is this ok?)
@@ -411,6 +415,7 @@ class BgpAttribute:
                 origin = int(last_seg.path[-1])
             elif last_seg.seg_type == self.BgpPathSegment.AS_SET:
                 origin = set(last_seg.path)
+            assert origin  # should not be 0 (no asn 0), or None, or an empty set
             return origin
 
         class BgpPathSegment:
@@ -427,7 +432,9 @@ class BgpAttribute:
                 self.as_len = 4 if is32 else 2
                 for i in range(cnt):
                     asn = unpack('>I' if is32 else '>H', data[:self.as_len])[0]
-                    assert asn > 0
+                    # assert asn > 0
+                    # moved to origin_as() method, to ignore when a strange asn is in the middle of an as-path;
+                    # e.g. in rib.20141014.0600.bz2, 193.104.137.128/25 has [20912, 0, 50112]. won't effect the origin
                     data = data[self.as_len:]
                     self.path.append(asn)
 

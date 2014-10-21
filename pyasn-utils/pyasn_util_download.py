@@ -28,6 +28,8 @@
 
 from __future__ import print_function, division
 from datetime import date, datetime
+from time import time
+import ftplib
 import subprocess
 from sys import argv, exit, stdout, version_info
 if version_info[0] < 3:
@@ -40,14 +42,36 @@ if not (len(argv) == 2 and argv[1] == '--latest') and not (len(argv) == 3 and ar
     print('\n       The script downloads MRT dump files from ROUTEVIEWS for the dates specified. It requires wget.')
     exit()
 
-
-dates_to_get = []
 download_mode = argv[1]
 
-if argv[1] == '--latest':
-     dates_to_get.append(datetime.now().date())
+if download_mode == '--latest':
+    # Thanks to Vitaly Khamin (https://github.com/khamin) for contributing this code:
+    DOMAIN = 'archive.routeviews.org'
+    print('Connecting to FTP via %s' % DOMAIN)
+    ftp = ftplib.FTP(DOMAIN)
+    ftp.login()
+    print('Finding latest RIB file...')
+    wd = '/' + max(ftp.nlst('bgpdata')) + '/RIBS/'
+    ftp.cwd(wd)
+    filename = max(ftp.nlst())
+    filesize = ftp.size(filename)
+    print('Downloading %s%s' % (wd, filename))
+    with open(filename, 'wb') as fp:
+        def recv(s):
+            fp.write(s)
+            recv.chunk += 1
+            recv.bytes += len(s)
+            if recv.chunk % 100 == 0:
+                print('\r %.f%%, %.fKB/s' % (recv.bytes*100 / filesize, recv.bytes / (1000*(time()-recv.start))), end='')
+                stdout.flush()
+        recv.chunk, recv.bytes, recv.start = 0, 0, time()
+        ftp.retrbinary('RETR %s' % filename, recv)
+    ftp.close()
+    print('\n Download complete.')
 
-if argv[1] == '--dates_from_file':
+
+if download_mode == '--dates_from_file':
+    dates_to_get = []
     f = open(argv[2])
     if not f:
         print("can't open %s" % argv[2])
@@ -58,41 +82,41 @@ if argv[1] == '--dates_from_file':
         dt = date(int(s[:4]), int(s[4:6]), int(s[6:8]) )
         dates_to_get.append(dt)
 
-for dt in dates_to_get:
-    url_dir = 'http://archive.routeviews.org/bgpdata/%d.%02d/RIBS/' % (dt.year, dt.month)
-    print('searching %s ...' % url_dir)
-    stdout.flush()
+    for dt in dates_to_get:
+        url_dir = 'http://archive.routeviews.org/bgpdata/%d.%02d/RIBS/' % (dt.year, dt.month)
+        print('searching %s ...' % url_dir)
+        stdout.flush()
 
-    http = urlopen(url_dir)
-    html = str(http.read())
-    http.close()
-    str_find = 'rib.%d%02d%02d' % (dt.year, dt.month, dt.day)
+        http = urlopen(url_dir)
+        html = str(http.read())
+        http.close()
+        str_find = 'rib.%d%02d%02d' % (dt.year, dt.month, dt.day)
 
-    ix = html.find(str_find + '.06')  # get the file saved at 6 AM for consistency
-    if ix == -1:
-        ix = html.find(str_find + '.05')  # if not, try 5 AM
+        ix = html.find(str_find + '.06')  # get the file saved at 6 AM for consistency
         if ix == -1:
-            ix = html.find(str_find + '.00')  # last resort, try the one saved at midnight
+            ix = html.find(str_find + '.05')  # if not, try 5 AM
             if ix == -1:
-                print(str(dt) + '\tERROR - NOT FOUND')
-                continue
+                ix = html.find(str_find + '.00')  # last resort, try the one saved at midnight
+                if ix == -1:
+                    print(str(dt) + '\tERROR - NOT FOUND')
+                    continue
 
-    fname = html[ix:ix+21]
-    s = html[ix+80:ix+150]
-    ix = s.find('"right"')
-    assert ix != -1
-    s = s[ix+8:]
-    ix = s.find("</td>")
-    assert ix != -1
-    size = s[:ix]
+        fname = html[ix:ix+21]
+        s = html[ix+80:ix+150]
+        ix = s.find('"right"')
+        assert ix != -1
+        s = s[ix+8:]
+        ix = s.find("</td>")
+        assert ix != -1
+        size = s[:ix]
 
-    url_full = url_dir + fname
-    if download_mode == '--latest':
-        ret = subprocess.call(['wget',  url_full])  # non-quiet mode
-    else:
-        ret = subprocess.call(['wget', '-q', url_full])  # quiet mode
-    ret = "" if ret == 0 else "[FAIL:%d]" % ret
+        url_full = url_dir + fname
+        if download_mode == '--latest':
+            ret = subprocess.call(['wget',  url_full])  # non-quiet mode
+        else:
+            ret = subprocess.call(['wget', '-q', url_full])  # quiet mode
+        ret = "" if ret == 0 else "[FAIL:%d]" % ret
 
-    print('%s\t%s\t%s\t%s' % (dt, size, url_full, ret))
-    stdout.flush()
+        print('%s\t%s\t%s\t%s' % (dt, size, url_full, ret))
+        stdout.flush()
 

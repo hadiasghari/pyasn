@@ -25,17 +25,16 @@
 # file to use per day should be of these series:
 # http://archive.routeviews.org/bgpdata/2009.11/RIBS/rib.20091125.0600.bz2
 
-# todo: test this file (underlying pyasn.mrtx already tested)
 
 from __future__ import print_function, division
-from pyasn import mrtx
-import bz2
+from pyasn import mrtx, __version__
+from bz2 import BZ2File
 from time import time
 from sys import argv, exit
 from glob import glob
 from datetime import datetime, timedelta
 
-print('MRT RIB log importer v1.5')
+print('MRT RIB log importer %s' % __version__)
 
 if len(argv) not in (4, 5) or argv[1] not in ('--single', '--bulk'):
     # todo: rewrite using argparse
@@ -49,7 +48,7 @@ if len(argv) not in (4, 5) or argv[1] not in ('--single', '--bulk'):
 binary_output = '--binary' in argv
 
 if argv[1] == '--single':
-    f = bz2.BZ2File(argv[2], 'rb')
+    f = BZ2File(argv[2], 'rb')
     dat = mrtx.parse_mrt_file(f, print_progress=True)
     f.close()
     if not binary_output:
@@ -79,7 +78,7 @@ while dt <= dt_end:
     if len(files) > 1:
         print("warning: multiple files on %s, only converting first." % dt)
     dump_file = files[0]
-    f = bz2.BZ2File(dump_file, 'rb')
+    f = BZ2File(dump_file, 'rb')
     print("%s... " % dump_file[4:-4])
     dat = mrtx.parse_mrt_file(f)
     f.close()

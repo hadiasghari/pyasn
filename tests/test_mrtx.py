@@ -214,7 +214,7 @@ class ConvertMRTFile(TestCase):
     def dotest_converter_full(self, full_ribdump_path, temp_ipasn_path, ipasn_db_path):
         # internal method called by both test_converter_full_v1 & test_converter_full_v2
         if not path.isfile(full_ribdump_path):
-            print("skipped, full dump doesn't exist .. ", file=stderr, end='')
+            print("SKIPPING - full dump doesn't exist .. ", file=stderr, end='')
             return
 
         f = bz2.BZ2File(full_ribdump_path, 'rb')

@@ -3,7 +3,6 @@ import codecs
 import sys
 import platform
 import glob
-
 from setuptools import setup, find_packages, Extension
 from os.path import abspath, dirname, join
 
@@ -25,9 +24,12 @@ if sys.version_info[0] == 2 and sys.version_info[1] < 7:
 
 utils = glob.glob('pyasn-utils/*.py')
 
+__version__ = None
+exec(open('pyasn/_version.py').read())  # load the actual __version__
+
 setup(
     name='pyasn',
-    version='1.5.0b2',
+    version=__version__,
     maintainer='Hadi Asghari',
     maintainer_email='hd.asghari@gmail.com',
     url='https://github.com/hadiasghari/pyasn',

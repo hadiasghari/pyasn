@@ -2,12 +2,6 @@
 2014-09-15
 ==========
 
-CRITICAL
-* final tests
-* upload to pip
-* update documentation and docstrings
-    * Add thanks to arman + link to our group (done)
-    * add how to get latest RIB to documentation (done)
 
 
 BACKLOG - for NEXT RELEASES
@@ -24,9 +18,9 @@ FOR RC STATUS:
 		(a) test radix - manually add/delete?
 		(b) mrtx code would need it to be added - marked in code
 * combine pyasn-util-* scripts into one script with good argument parsing
+* perhaps, profiling pyasn.mrtx code
 
 OTHER:
-* upload our own asndb files to different github repository for users
+* upload our own asndb files (after recreation) to 3TU Datacenter
+
 * installer: cleanup not working? what is our "coverage" ?
-
-

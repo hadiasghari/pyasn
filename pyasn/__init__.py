@@ -17,9 +17,10 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
+from collections import defaultdict
 from .pyasn_radix import Radix
 import re
+from _version import __version__
 
 
 class pyasn(object):  
@@ -52,6 +53,7 @@ class pyasn(object):
         self._binary = binary
         self._records = self.radix.load_ipasndb(ip_asn_db_file, binary=binary)
         self._asnames = self._read_asnames() if as_names_file else None
+        self._as_prefixes = None
 
     def _read_asnames(self):
         """
@@ -81,8 +83,14 @@ class pyasn(object):
 
     def get_as_prefixes(self, asn):
         """ :return: All prefixes advertised by given ASN """
-        # note: can build a full dict of {asn: set(prefixes)} on first call, and cache it for subsequent calls to method
-        return [px for px in self.radix.prefixes() if self.lookup(px.split('/')[0])[0] == asn]
+        if not self._as_prefixes:
+            # build full dictionary of {asn: set(prefixes)}, and cache it for subsequent calls
+            self._as_prefixes = defaultdict(set)
+            for px in self.radix.prefixes():
+                a = self.lookup(px.split('/')[0])[0]
+                self._as_prefixes[a].add(px)
+        #
+        return self._as_prefixes[int(asn)] if int(asn) in self._as_prefixes else None
 
     def get_as_name(self, asn):
         """
