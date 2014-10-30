@@ -20,7 +20,7 @@
 from collections import defaultdict
 from .pyasn_radix import Radix
 import re
-from _version import __version__
+from ._version import __version__
 
 
 class pyasn(object):  
