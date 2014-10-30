@@ -23,7 +23,6 @@
 
 # script to download routeview bgpdata for a certain period
 # the dates of the files to be downloaded are read from a file
-# v2 , 23-03-2012
 
 
 from __future__ import print_function, division
@@ -45,17 +44,25 @@ if not (len(argv) == 2 and argv[1] == '--latest') and not (len(argv) == 3 and ar
 download_mode = argv[1]
 
 if download_mode == '--latest':
-    # Thanks to Vitaly Khamin (https://github.com/khamin) for contributing this code:
+    # Thanks to Vitaly Khamin (https://github.com/khamin) for suggesting this method
     DOMAIN = 'archive.routeviews.org'
-    print('Connecting to FTP via %s' % DOMAIN)
+    print('Connecting to ftp://' + DOMAIN)
     ftp = ftplib.FTP(DOMAIN)
     ftp.login()
-    print('Finding latest RIB file...')
-    wd = '/' + max(ftp.nlst('bgpdata')) + '/RIBS/'
-    ftp.cwd(wd)
-    filename = max(ftp.nlst())
+    months = sorted(ftp.nlst('bgpdata'), reverse=True)    
+    print("Finding latest RIB file in /%s/RIBS/ ..." % months[0])
+    ftp.cwd('/%s/RIBS/' % months[0])
+    fls = ftp.nlst()
+    if not fls:
+        print("Finding latest RIB file in /%s/RIBS/ ..." % months[1])
+        ftp.cwd('/%s/RIBS/' % months[1])
+        fls = ftp.nlst()
+        if not fls:
+            print("Cannot find file to download. Please report a bug for the script")
+            exit()            
+    filename = max(fls)
     filesize = ftp.size(filename)
-    print('Downloading %s%s' % (wd, filename))
+    print('Downloading %s' % (filename))
     with open(filename, 'wb') as fp:
         def recv(s):
             fp.write(s)
