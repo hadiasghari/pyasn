@@ -547,12 +547,10 @@ radix_remove(radix_tree_t *radix, radix_node_t *node)
 }
 
 /* Local additions */
-static void
-sanitise_mask(u_char *addr, u_int masklen, u_int maskbits)
+static void sanitise_mask(u_char *addr, u_int masklen, u_int maskbits)
 {
         u_int i = masklen / 8;
         u_int j = masklen % 8;
-
         if (j != 0) {
                 addr[i] &= (~0) << (8 - j);
                 i++;
@@ -561,101 +559,55 @@ sanitise_mask(u_char *addr, u_int masklen, u_int maskbits)
                 addr[i] = 0;
 }
 
-prefix_t
-*prefix_pton(const char *string, long len, const char **errmsg, prefix_t *prefix)     
-// HA : added input prefix_t to make sharing object possible;
+// HA - 2014/10/30. This function was causing all the slowness in the new version; 
+//      I've rewritten it to use inet_pton() instead of the previous getaddrinfo() call.
+//      In the process, I also removed some code paths that didn't get called. 
+//      All tests still run correctly. However, the IPv6 part now has one extra TODO
+
+prefix_t *prefix_pton(const char *string, long len, const char **errmsg)     
 {
-        char save[256], *cp, *ep;
-        struct addrinfo hints, *ai;
-        void *addr;
-        prefix_t *ret;
-        size_t slen;
-        int r;
+        unsigned char buf[sizeof(struct in6_addr)];         
+        prefix_t *ret = NULL;
+        int a_family = AF_INET; // TODO: for IPv6, determine this automatically, or get as parameter
+        int max_prefix = 0;
 
-        ret = NULL;
+        // TODO: check inet_pton() includes for Windows; 
+        if (inet_pton(a_family, string, buf) <= 0) {  
+			*errmsg = "inet_pton() returned error";
+			return NULL;
+		}
 
-        /* Copy the string to parse, because we modify it */
-        if ((slen = strlen(string) + 1) > sizeof(save)) {
-                *errmsg = "string too long";
-                return (NULL);
+		max_prefix = (a_family == AF_INET ? 32 : 128);
+        if (len == -1)
+			len = max_prefix; // wiered case is actually used internally by the tree 
+        else if (len < 0 || len > max_prefix) {
+			*errmsg = "invalid prefix length";
+             return NULL;
         }
-        memcpy(save, string, slen);
+        sanitise_mask(buf, len, max_prefix);
 
-        if ((cp = strchr(save, '/')) != NULL) {
-                if (len != -1 ) {
-                        *errmsg = "masklen specified twice";
-                        return (NULL);
-                }
-                *cp++ = '\0';
-                len = strtol(cp, &ep, 10);
-                if (*cp == '\0' || *ep != '\0' || len < 0) {
-                        *errmsg = "could not parse masklen";
-                        return (NULL);
-                }
-                /* More checks below */
-        }
-        memset(&hints, '\0', sizeof(hints));
-        hints.ai_flags = AI_NUMERICHOST;
-
-        if ((r = getaddrinfo(save, NULL, &hints, &ai)) != 0) {
-                *errmsg = gai_strerror(r);
-                return NULL;
-        }
-        if (ai == NULL || ai->ai_addr == NULL) {
-                *errmsg = "getaddrinfo returned no result";
-                goto out;
-        }
-        switch (ai->ai_addr->sa_family) {
-        case AF_INET:
-                if (len == -1)
-                        len = 32;
-                else if (len < 0 || len > 32) {
-                        *errmsg = "invalid prefix length";
-                        goto out;
-                }
-                addr = &((struct sockaddr_in *) ai->ai_addr)->sin_addr;
-                sanitise_mask(addr, len, 32);
-                break;
-        case AF_INET6:
-                if (len == -1)
-                        len = 128;
-                else if (len < 0 || len > 128) {
-                        *errmsg = "invalid prefix length";
-                        goto out;
-                }
-                addr = &((struct sockaddr_in6 *) ai->ai_addr)->sin6_addr;
-                sanitise_mask(addr, len, 128);
-                break;
-        default:
-                goto out;
-        }
-
-        ret = New_Prefix2(ai->ai_addr->sa_family, addr, len, prefix); // HA: was New_Prefix2(a(...,NULL);
+        ret = New_Prefix2(a_family, buf, len, NULL); 
         if (ret == NULL)
-                *errmsg = "New_Prefix2 failed";
-out:
-        freeaddrinfo(ai);
-        return (ret);
+			*errmsg = "New_Prefix2() failed";
+        
+        return ret;
 }
 
-prefix_t
-*prefix_from_blob(u_char *blob, int len, int prefixlen)
+
+prefix_t *prefix_from_blob(u_char *blob, int len, int prefixlen)
 {
         int family, maxprefix;
 
         switch (len) {
         case 4:
-                /* Assume AF_INET */
                 family = AF_INET;
                 maxprefix = 32;
                 break;
         case 16:
-                /* Assume AF_INET6 */
                 family = AF_INET6;
                 maxprefix = 128;
                 break;
         default:
-                /* Who knows? */
                 return NULL;
         }
         if (prefixlen == -1)
@@ -665,22 +617,11 @@ prefix_t
         return (New_Prefix2(family, blob, prefixlen, NULL));
 }
 
-const char *
-prefix_addr_ntop(prefix_t *prefix, char *buf, size_t len)
-{
-        return (inet_ntop(prefix->family, &prefix->add, buf, len));
-}
 
-const char *
-prefix_ntop(prefix_t *prefix, char *buf, size_t len)
-{
-        char addrbuf[128];
-        if (prefix_addr_ntop(prefix, addrbuf, sizeof(addrbuf)) == NULL)
-                return (NULL);
-        snprintf(buf, len, "%s/%d", addrbuf, prefix->bitlen);
-        return (buf);
-}
-	
+// HADI - commented out on 2014-10-30 the following two functions as they are not used:
+// const char *prefix_addr_ntop(prefix_t *prefix, char *buf, size_t len)
+// const char *prefix_ntop(prefix_t *prefix, char *buf, size_t len)
+
 
 #ifdef _WIN32 
 // In Windows, this isn't normally included (depending on libraries and version, it might be, or it might not). 

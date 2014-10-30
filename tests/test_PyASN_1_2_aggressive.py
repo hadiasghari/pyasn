@@ -52,7 +52,7 @@ class TestPyASNAggresive(TestCase):
             newdb = pyasn.pyasn(db)
             olddb = PyASN.new(db)
 
-            for i in range(500000):
+            for i in range(1000000):
                 i1 = random.randint(1, 223)
                 i2 = random.randint(0, 255)
                 i3 = random.randint(0, 255)
@@ -60,7 +60,13 @@ class TestPyASNAggresive(TestCase):
 
                 sip = "%d.%d.%d.%d" % (i1, i2, i3, i4)
                 newas, prefix = newdb.lookup(sip)
+                if newas: 
+                    self.assertTrue(newas > 0, msg="Negative AS for IP %s = %s" % (sip, newas))  
                 oldas = olddb.Lookup(sip)
+                if oldas < 0:
+                    # this is an overflow bug in the old version, 
+                    # e.g. 193.181.4.145 on 2014/10/07 returns -33785576 
+                    continue  
                 self.assertEqual(oldas, newas, msg="Failed for IP %s" % sip)
 
 

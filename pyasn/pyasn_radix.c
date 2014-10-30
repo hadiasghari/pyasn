@@ -281,27 +281,20 @@ static prefix_t
         const char *errmsg;
 
         if (addr != NULL && packed != NULL) {
-                PyErr_SetString(PyExc_TypeError,
-                            "Two address types specified. Please pick one.");
+                PyErr_SetString(PyExc_TypeError, "Two address types specified. Please pick one.");
                 return NULL;
         }
-
         if (addr == NULL && packed == NULL) {
-                PyErr_SetString(PyExc_TypeError,
-                            "No address specified (use 'address' or 'packed')");
+                PyErr_SetString(PyExc_TypeError, "No address specified");
                 return NULL;
-        }
-
+        }        
         if (addr != NULL) {             /* Parse a string address */
-                if ((prefix = prefix_pton(addr, prefixlen, &errmsg, NULL)) == NULL) {
-                        PyErr_SetString(PyExc_ValueError, errmsg ? errmsg :
-                            "Invalid address format");
+                if ((prefix = prefix_pton(addr, prefixlen, &errmsg)) == NULL) {
+					PyErr_SetString(PyExc_ValueError, errmsg ? errmsg : "Invalid address format");
                 }
-        } else if (packed != NULL) {    /* "parse" a packed binary address */
-                if ((prefix = prefix_from_blob((u_char*)packed, packlen, 
-                    prefixlen)) == NULL) {
-                        PyErr_SetString(PyExc_ValueError,
-                            "Invalid packed address format");
+        } else if (packed != NULL) {    /* "parse" a packed binary address */			
+                if ((prefix = prefix_from_blob((u_char*)packed, packlen, prefixlen)) == NULL) {
+                        PyErr_SetString(PyExc_ValueError, "Invalid packed address format");
                 }
         }
         if (prefix != NULL &&
@@ -309,7 +302,6 @@ static prefix_t
                 Deref_Prefix(prefix);
                 return (NULL);
         }
-
         return prefix;
 }
 
@@ -658,7 +650,7 @@ Radix_load_ipasndb(RadixObject *self, PyObject *args, PyObject *kw_args)
                 asn = *((u_int32_t *)(buf + 5 + i*9));                    
                 if (++n > n_prefixes) { 
                     // the end includes one zero element
-                    if (addr != 0 || prefixlen != 0 || asn != 0)
+                    if (prefixlen != 0 || asn != 0)
                         goto parse_or_memory_error;
                     break;
                 }
@@ -672,34 +664,31 @@ Radix_load_ipasndb(RadixObject *self, PyObject *args, PyObject *kw_args)
                 ((RadixNodeObject *)node_obj)->asn = asn; 
                 
                 Py_DECREF(node_obj); 
-                Deref_Prefix(prefix);	
-            }		
+                Deref_Prefix(prefix);
+            }
             if (n > n_prefixes) 
                 break;
-        }			
+        }
 	}
     else {
         char buf[512], *p1, *p2;            
-        while (fgets(buf, 512, ccfd) != NULL)  {	        
-            if (buf[0] == ';' && strncmp("; START-AS-NAMES", buf, strlen("; START-AS-NAMES"))==0)
-                break;  // prefixes section has ended and the blob with as-names stored starts.
-                
+        while (fgets(buf, 512, ccfd) != NULL)  {
             if (buf[0] == ';' || buf[0] == '#' || buf[0] == '\n')
                 continue;  // skip comments and empty lines         
                 
             if ( (p1=strchr(buf, '\t')) == NULL || (p2 = strchr(buf, '/')) == NULL || p2>p1 )
-                goto parse_or_memory_error;             			        
-            *p1++ = *p2++ = 0;  // now: p1 is ASN; p2 is PrefixLen; buf is network address			            
+                goto parse_or_memory_error;     
+
+            *p1++ = *p2++ = 0;  // now: p1 is ASN; p2 is PrefixLen; buf is network address
             asn = (u_int32_t) atol(p1);  
             prefixlen = atoi(p2);                          
             
             if (asn == 0 || prefixlen == 0)
                 goto parse_or_memory_error;                      
-            
-            if ((prefix = prefix_pton(buf, prefixlen, &err_msg_i, NULL)) == NULL)  
-                goto parse_or_memory_error;     
-            
-            assert(prefix->family == AF_INET || prefix->family == AF_INET6);
+                        
+            if ((prefix = prefix_pton(buf, prefixlen, &err_msg_i)) == NULL)  
+                goto parse_or_memory_error;                 
+            //assert(prefix->family == AF_INET || prefix->family == AF_INET6);
             
             if ((node_obj = create_add_node(self, prefix)) == NULL) 
                 goto parse_or_memory_error;               
@@ -710,17 +699,14 @@ Radix_load_ipasndb(RadixObject *self, PyObject *args, PyObject *kw_args)
             Deref_Prefix(prefix);
             n++;
         }
-    }
-    
+    }    
     fclose(ccfd);
     return PyInt_FromLong(n);
 
-
 parse_or_memory_error:           
     sprintf(err_msg, "Error while parsing/adding IPASN database (mode: %s, record: %d)!", (binary ? "binary" : "text"), (int)(n+1));
-    // could also add err_msg_i, if set
     PyErr_SetString(PyExc_RuntimeError, err_msg);  
-    // TODO/perhaps: clear or reset tree before returning from error
+    // could add err_msg_i, if set. also perhaps, clear or reset tree before returning from error
     fclose(ccfd);
     return NULL;    
 }

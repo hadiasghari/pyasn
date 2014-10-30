@@ -159,10 +159,7 @@ void radix_process(radix_tree_t *radix, rdx_cb_t func, void *cbctx);
         } while (0)
 
 /* Local additions */
-
-prefix_t *prefix_pton(const char *string, long len, const char **errmsg, prefix_t *prefix);
+prefix_t *prefix_pton(const char *string, long len, const char **errmsg);  
 prefix_t *prefix_from_blob(u_char *blob, int len, int prefixlen);
-const char *prefix_addr_ntop(prefix_t *prefix, char *buf, size_t len);
-const char *prefix_ntop(prefix_t *prefix, char *buf, size_t len);
 
 #endif /* _RADIX_H */
