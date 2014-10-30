@@ -13,7 +13,7 @@ FOR RC STATUS:
     * test with RIPE RIS (http://www.ripe.net/data-tools/stats/ris/ris-raw-data) -- different views most likely cause
     * understand nature of multiple entries in MRT-records. we use only first.
       (actually all have same origin in TD1 test, so this shouldn't be it either)
-* test for windows
+* test for windows (done - tested with vs2010 + python3.4 / miniconda3, via pip and direct)
 * ipv6 support:
 		(a) test radix - manually add/delete?
 		(b) mrtx code would need it to be added - marked in code

@@ -43,9 +43,11 @@ Ubuntu/Debian you can get them using the following command: ::
 
     sudo apt-get install python-pip python-dev build-essential
 
-Building the C module on Windows requires Microsoft Visual Studio. In general, it's easiest to build modules 
-using the same Visual Studio version that was used to build the installed Python binaries (e.g., VS2010 for 
-Python 3.4). Other versions of Visual Studio, as well as MinGW on Cygwin or Anaconda can work with some modifications.
+Building the C module on Windows, using either pip or from source, requires Microsoft Visual C++ to be installed. 
+pyasn has been tested using Visual C++ Express 2010, available freely from Microsoft's website, on both the 
+official Python 3.4 release and Miniconda3. Other versions of Python, Visual Studio, and Cygwin could also work 
+with minor modifications.
+
 
 Usage
 =====
