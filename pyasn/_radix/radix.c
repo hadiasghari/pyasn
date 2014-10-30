@@ -56,12 +56,10 @@
  */
 
 #include "Python.h"
-
 #include <sys/types.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-
 #include "radix.h"
 
 /* $Id$ */
@@ -97,8 +95,9 @@ comp_with_mask(u_char* addr, u_char* dest, u_int mask)
         return (0);
 }
 
-static prefix_t 
-*New_Prefix2(int family, void *dest, int bitlen, prefix_t *prefix)
+
+static prefix_t*
+New_Prefix2(int family, void *dest, int bitlen, prefix_t *prefix)
 {
         int dynamic_allocated = 0;
         int default_bitlen = 32;
@@ -137,8 +136,8 @@ static prefix_t
 }
 
 
-static prefix_t 
-*Ref_Prefix(prefix_t *prefix)
+static prefix_t*
+Ref_Prefix(prefix_t *prefix)
 {
         if (prefix == NULL)
                 return (NULL);
@@ -170,29 +169,24 @@ Deref_Prefix(prefix_t *prefix)
  */
 
 /* these routines support continuous mask only */
-
-radix_tree_t
-*New_Radix(void)
+radix_tree_t*
+New_Radix(void)
 {
         radix_tree_t *radix;
-
         if ((radix = PyMem_Malloc(sizeof(*radix))) == NULL)
                 return (NULL);
         memset(radix, '\0', sizeof(*radix));
-
         radix->maxbits = 128;
         radix->head = NULL;
         radix->num_active_node = 0;
         return (radix);
 }
 
-/*
- * if func is supplied, it will be called as func(node->data)
- * before deleting the node
- */
+
 static void
 Clear_Radix(radix_tree_t *radix, rdx_cb_t func, void *cbctx)
 {
+        // if func is supplied, it will be called as func(node->data) before deleting the node
         if (radix->head) {
                 radix_node_t *Xstack[RADIX_MAXBITS + 1];
                 radix_node_t **Xsp = Xstack;
@@ -225,6 +219,7 @@ Clear_Radix(radix_tree_t *radix, rdx_cb_t func, void *cbctx)
         }
 }
 
+
 void
 Destroy_Radix(radix_tree_t *radix, rdx_cb_t func, void *cbctx)
 {
@@ -232,21 +227,20 @@ Destroy_Radix(radix_tree_t *radix, rdx_cb_t func, void *cbctx)
         PyMem_Free(radix);
 }
 
-/*
- * if func is supplied, it will be called as func(node->prefix, node->data)
- */
+
 void
 radix_process(radix_tree_t *radix, rdx_cb_t func, void *cbctx)
 {
+        //  if func is supplied, it will be called as func(node->prefix, node->data)
         radix_node_t *node;
-
         RADIX_WALK(radix->head, node) {
                 func(node, cbctx);
         } RADIX_WALK_END;
 }
 
-radix_node_t
-*radix_search_exact(radix_tree_t *radix, prefix_t *prefix)
+
+radix_node_t*
+radix_search_exact(radix_tree_t *radix, prefix_t *prefix)
 {
         radix_node_t *node;
         u_char *addr;
@@ -280,10 +274,10 @@ radix_node_t
 }
 
 
-/* if inclusive != 0, "best" may be the given prefix itself */
-static radix_node_t
-*radix_search_best2(radix_tree_t *radix, prefix_t *prefix, int inclusive)
+static radix_node_t*
+radix_search_best2(radix_tree_t *radix, prefix_t *prefix, int inclusive)
 {
+        // if inclusive != 0, "best" may be the given prefix itself 
         radix_node_t *node;
         radix_node_t *stack[RADIX_MAXBITS + 1];
         u_char *addr;
@@ -312,7 +306,6 @@ static radix_node_t
         if (inclusive && node && node->prefix)
                 stack[cnt++] = node;
 
-
         if (cnt <= 0)
                 return (NULL);
 
@@ -327,15 +320,15 @@ static radix_node_t
 }
 
 
-radix_node_t
-*radix_search_best(radix_tree_t *radix, prefix_t *prefix)
+radix_node_t*
+radix_search_best(radix_tree_t *radix, prefix_t *prefix)
 {
         return (radix_search_best2(radix, prefix, 1));
 }
 
 
-radix_node_t
-*radix_lookup(radix_tree_t *radix, prefix_t *prefix)
+radix_node_t*
+radix_lookup(radix_tree_t *radix, prefix_t *prefix)
 {
         radix_node_t *node, *new_node, *parent, *glue;
         u_char *addr, *test_addr;
@@ -546,8 +539,9 @@ radix_remove(radix_tree_t *radix, radix_node_t *node)
                 parent->l = child;
 }
 
-/* Local additions */
-static void sanitise_mask(u_char *addr, u_int masklen, u_int maskbits)
+
+static void 
+sanitise_mask(u_char *addr, u_int masklen, u_int maskbits)
 {
         u_int i = masklen / 8;
         u_int j = masklen % 8;
@@ -559,19 +553,19 @@ static void sanitise_mask(u_char *addr, u_int masklen, u_int maskbits)
                 addr[i] = 0;
 }
 
+
 // HA - 2014/10/30. This function was causing all the slowness in the new version; 
 //      I've rewritten it to use inet_pton() instead of the previous getaddrinfo() call.
 //      In the process, I also removed some code paths that didn't get called. 
 //      All tests still run correctly. However, the IPv6 part now has one extra TODO
-
-prefix_t *prefix_pton(const char *string, long len, const char **errmsg)     
+prefix_t*
+prefix_pton(const char *string, long len, const char **errmsg)     
 {
         unsigned char buf[sizeof(struct in6_addr)];         
         prefix_t *ret = NULL;
         int a_family = AF_INET; // TODO: for IPv6, determine this automatically, or get as parameter
         int max_prefix = 0;
 
-        // TODO: check inet_pton() includes for Windows; 
         if (inet_pton(a_family, string, buf) <= 0) {  
 			*errmsg = "inet_pton() returned error";
 			return NULL;
@@ -594,7 +588,8 @@ prefix_t *prefix_pton(const char *string, long len, const char **errmsg)
 }
 
 
-prefix_t *prefix_from_blob(u_char *blob, int len, int prefixlen)
+prefix_t*
+prefix_from_blob(u_char *blob, int len, int prefixlen)
 {
         int family, maxprefix;
 
@@ -618,21 +613,13 @@ prefix_t *prefix_from_blob(u_char *blob, int len, int prefixlen)
 }
 
 
-// HADI - commented out on 2014-10-30 the following two functions as they are not used:
+// HADI - commented out, functions not used:
 // const char *prefix_addr_ntop(prefix_t *prefix, char *buf, size_t len)
 // const char *prefix_ntop(prefix_t *prefix, char *buf, size_t len)
 
 
-#ifdef _WIN32 
-// In Windows, this isn't normally included (depending on libraries and version, it might be, or it might not). 
-// For ease, we just declare it again
-
-#ifndef _MSC_VER
+/*#ifdef __MINGW32__
 const char *inet_ntop(int af, const void *src, char *dst, size_t cnt) 
-#else
-// on VS2010, this is already defined with slightly different modifiers
-PCSTR WSAAPI inet_ntop(INT af, PVOID src, PSTR dst, size_t cnt)
-#endif
 { 
         if (af == AF_INET) 
         { 
@@ -654,20 +641,4 @@ PCSTR WSAAPI inet_ntop(INT af, PVOID src, PSTR dst, size_t cnt)
         } 
         return NULL; 
 }        
-
-// TODO: another sample, if the above doesn't work. remove if OK.
-/*const char* inet_ntop(int af, const void* src, char* dst, size_t cnt)
-{ 
-    struct sockaddr_in srcaddr;
-    memset(&srcaddr, 0, sizeof(struct sockaddr_in));
-    memcpy(&(srcaddr.sin_addr), src, sizeof(srcaddr.sin_addr));
-    srcaddr.sin_family = af;
-    if (WSAAddressToString((struct sockaddr*) &srcaddr, sizeof(struct sockaddr_in), 0, dst, (LPDWORD) &cnt) != 0) {
-        int rv = WSAGetLastError();
-        printf("WSAAddressToString() : %d\n", rv);
-        return NULL;
-    }
-    return dst;
-} */
-
-#endif 
+#endif*/

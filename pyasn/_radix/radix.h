@@ -61,29 +61,24 @@
 #define _RADIX_H
 
 
-#if defined __MINGW32__ || defined _MSC_VER
-
+#if defined _WIN32 
 #include <winsock2.h>
-#include <ws2tcpip.h>  // required for IPv6 definitions
+#include <ws2tcpip.h>  // IPv6 definitions
 #define snprintf _snprintf
 typedef unsigned __int8         u_int8_t;
 typedef unsigned __int16        u_int16_t;
 typedef unsigned __int32        u_int32_t;
 size_t strlcpy(char *dst, const char *src, size_t size);
-
-#ifndef _MSC_VER
+/*#ifdef __MINGW32__
 // following is needed in Windows; on VS2010 already defined 
 const char *inet_ntop(int af, const void *src, char *dst, size_t size);  
-#endif
-
+#endif*/
 #else
-
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
-
 #endif
 
 
