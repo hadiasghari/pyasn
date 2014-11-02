@@ -3,6 +3,9 @@
 #   (can't also be due to multiple TD entries, as these are non-existant prefixes, not different ones
 #    leaves only possibility different routeview / bgp-routing point of views - to check)
 
+# 2014/11/02: if I am not mistaken, RouteViews data was 2014-05-13 06:00, and Cymru for 2014-05-13 00:00;
+#             that COULD explain some difference. (I tried two randomly, it didn't)
+
 # # not sure why we don't have these in the DAT, but we don't.
 104.135.25.154  > cymru:  36384, pyasn:   None
 104.144.210.69  > cymru:  55286, pyasn:   None
@@ -21,6 +24,29 @@
 # whois resolves to RIPE, AS-name is KPN
 49.232.221.106  > cymru:   None, pyasn:  62294
 # whois resolves to BJENET (Chinese), AS-name is Castcable HK
+
+
+RANDOM re-checks of above:
+$ whois -h whois.cymru.com " -v 104.135.25.154 2014-05-13 06:00:00 GMT"
+AS      | IP               | BGP Prefix          | CC | Registry | Allocated  | Info                    | AS Name
+36384   | 104.135.25.154   | 104.132.0.0/14      | US | arin     | 2014-07-03 | 2014-05-13 06:00:00 GMT | GOOGLE-IT - Google Incorporated,US
+
+$ whois -h whois.cymru.com " -v 42.103.221.212 2014-05-13 06:00:00 GMT"
+AS      | IP               | BGP Prefix          | CC | Registry | Allocated  | Info                    | AS Name
+4134    | 42.103.221.212   | 42.103.0.0/16       | CN | apnic    | 2011-02-28 | 2014-05-13 06:00:00 GMT | CHINANET-BACKBONE No.31,Jin-rong Street,CN
+
+$ whois -h whois.cymru.com " -v 192.129.36.175 2014-05-13 06:00:00 GMT"
+AS      | IP               | BGP Prefix          | CC | Registry | Allocated  | Info                    | AS Name
+NA      | 192.129.36.175   | NA                  | DE | ripencc  |            | 2014-05-13 06:00:00 GMT | NA
+
+db = pyasn.pyasn('devel/pyasn.git/data/ipasn_20140513.dat')
+db.lookup('104.135.25.154')
+#Out: (None, None)
+db.lookup('42.103.221.212')
+#Out: (None, None)
+db.lookup('192.129.36.175')
+#Out: (286, '192.129.32.0/20')
+
 
 # are these same/different??
 171.0.248.105   > cymru:  17552, pyasn:   9874  # StarHub, TrueAS

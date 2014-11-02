@@ -48,7 +48,7 @@ except:
 IS_PYTHON2 = (version_info[0] == 2)
 
 
-def parse_mrt_file(file, print_progress=False, debug_break_after=None):
+def parse_mrt_file(mrt_file, print_progress=False, debug_break_after=None):
     """parse_file(file, print_progress=False):
 Parses an MRT/RIB dump file.\n
     in: opened dump file to use (file-object)
@@ -61,7 +61,7 @@ Both version 1 & 2 TABLE_DUMPS are supported, as well as 32bit ASNs. However, th
     results = OrderedDict()
     n, stime = 0, time()
     while True:
-        mrt = MrtRecord.next_dump_table_record(file)
+        mrt = MrtRecord.next_dump_table_record(mrt_file)
         if not mrt:
             # EOF
             break
@@ -74,25 +74,28 @@ Both version 1 & 2 TABLE_DUMPS are supported, as well as 32bit ASNs. However, th
         # important change from pyasn_converter 1.2"
         #   in 1.2, we ignored origins of as_paths ending in as_set (with one AS - quite common - or multiple )
         #   as well as origins of as_paths with more than three segments (very few)
-        #   this was a silly bug as these prefixes would not be saved (impact: 129 of 513000 prefixes for 2014-05-23)
+        #   this was a silly bug, andthese prefixes (129 in a total of 513000 prefixes for 2014-05-23) weren't saved
 
         if mrt.prefix not in results:
             try:
-                results[mrt.prefix] = mrt.as_path.origin_as
+                #if mrt.prefix in ("162.212.40.0/24", "192.88.192.0/24", "199.193.100.0/22", "207.35.39.0/24"):
+                #    print("  DEBUG %s for %s" % (mrt.as_path, mrt.prefix), file=stderr)
+                origin = mrt.as_path.origin_as
+                results[mrt.prefix] = origin
             except:
-                print("  Error parsing prefix '%s'" % (mrt.prefix))  # to aid debugging, print prefix raising exception
+                print("  Error parsing prefix '%s'" % (mrt.prefix), file=stderr)  # to aid debugging
                 raise
         else:
             assert mrt.type == mrt.TYPE_TABLE_DUMP
             # in TD2, no prefix appears twice. (probably because we use *only entry 0 of records* -- is this ok?)
             # in TD1, they do, "but we are only interested in getting the first match" (quote from asn v1.2)
-            #          for one TD1 dump checked: all duplicate prefixes had same origin (don't always compare for speed)
+            #          for one TD1 dump checked: all duplicate prefixes had same origin (we don't assert all for speed)
 
         n += 1
         if debug_break_after and n > debug_break_after:
             break
         if print_progress and n % (100000 if mrt.type == mrt.TYPE_TABLE_DUMP_V2 else 500000) == 0:
-            print('  mrt record %d @%.fs' % (n, time() - stime), file=stderr)
+            print('  MRT record %d @%.fs' % (n, time() - stime), file=stderr)
     #
     if '0.0.0.0/0' in results:
         del results['0.0.0.0/0']  # remove default route - can be parameter
@@ -146,6 +149,21 @@ def dump_prefixes_to_binary_file(ipasn_data, out_bin_file_name, orig_mrt_name, e
     fw.close()
 
 
+def is_asn_bogus(asn):
+    """Returns True if the ASN is in the private-use or reserved list of ASNs"""
+    # References:
+    #       IANA:  http://www.iana.org/assignments/as-numbers/as-numbers.xhtml
+    #       RFCs:  rfc1930, rfc6996, rfc7300, rfc5398
+    #       Cymru: http://www.team-cymru.org/Services/Bogons/, http://www.cymru.com/BGP/asnbogusrep.html
+    #       WHOIS: https://github.com/rfc1036/whois   -- in the program source
+    #       CIDR-Report: http://www.cidr-report.org/as2.0/reserved-ases.html
+    # Note that the full list of unallocated and bogus ASNs is long, and changes; we use the basic
+    if 64198 <= asn <= 131071 or asn >= 4200000000:   # reserved & private-use-AS
+        return True
+    if asn >= 1000000:  # way above last currently allocated block (2014-11-02) -- might change in future
+        return True
+    return False
+
 
 #####################################################################
 # MRT headers, tables, and attributes sections
@@ -183,7 +201,7 @@ class MrtRecord:
         buf = f.read(header_len)  # read table-header
         if not buf:  # EOF
             return None
-        assert len(buf) == header_len
+        #assert len(buf) == header_len
         mrt = MrtRecord(buf)
         buf = f.read(mrt.data_len)  # read table-data
         assert len(buf) == mrt.data_len
@@ -199,8 +217,8 @@ class MrtRecord:
             raise Exception("MrtTableHeader received an unknown MRT table dump TYPE <%d>!" % mrt.type)
         return mrt
 
-    def __str__(self):
-        return 'MrtTable {ts:%d, type:%d, sub-type:%d, data-len:%d, seq:%s, prefix:%s}' \
+    def __repr__(self):
+        return 'MrtTable(ts:%d, type:%d, sub-type:%d, data-len:%d, seq:%s, prefix:%s)' \
                % (self.ts, self.type, self.sub_type, self.data_len, self.table_seq, self.prefix)
 
     @property
@@ -231,27 +249,29 @@ class MrtTableDump1:
         assert sub_type1 == MrtRecord.T1_AFI_IPv4  # for IPv6: prefix-size (16B vs 4B) & way handled is different
         self.view, self.seq, prefix, mask, self.status, self.orig_ts, self.peer_ip, self.peer_as, self.attr_len\
             = unpack('>HHIBBIIHH', buf[:22])
-
-        s_prefix = inet_ntoa(pack('>I', prefix))
-        self.s_prefix = s_prefix + "/%d" % mask
-
+        self.s_prefix = "%s/%d" % (inet_ntoa(pack('>I', prefix)), mask)
         assert self.view == 0  # view is normally 0; its intended for when an implementation has multiple RIB views
+        self._attrs = []
+        self._data_buf = buf
 
-        # The BGP Attribute field contains the BGP attribute information for the RIB entry.
-        buf = buf[22:]
-        self.attrs = []
-        j = self.attr_len
-        while j > 0:
-            a = BgpAttribute(buf, is32=False)
-            self.attrs.append(a)
-            buf = buf[len(a):]
-            j -= len(a)
-            #if a.bgp_type == BgpAttribute.ATTR_AS_PATH:
-            #    break  # speed optimization: we can stop parsing other attributes after ASPATH
-        assert not j and not buf  # make sure all data is used -- needs to be commented if above optimization on
+    @property
+    def attrs(self):
+        # The BGP Attribute field contains the BGP attribute information for the RIB entry. Parse on demand for perf.
+        if not self._attrs:
+            buf = self._data_buf[22:]
+            j = self.attr_len
+            while j > 0:
+                a = BgpAttribute(buf, is32=False)
+                self._attrs.append(a)
+                buf = buf[len(a):]
+                j -= len(a)
+                if a.bgp_type == BgpAttribute.ATTR_AS_PATH:
+                    break  # slight speed optimization: we can stop parsing other attributes after ASPATH
+            #assert not j and not buf  # make sure all data is used -- needs to be commented if above optimization on
+        return self._attrs
 
-    def __str__(self):
-        return 'MrtTableDump1 {seq:%d, prefix:%s + sole entry [attr-len:%d, peer:%d, orig-ts:%d]}' % \
+    def __repr__(self):
+        return 'MrtTableDump1(seq:%d, prefix:%s + sole entry [attr-len:%d, peer:%d, orig-ts:%d])' % \
             (self.seq, self.s_prefix, self.attr_len, self.peer_as, self.orig_ts)
 
 
@@ -279,10 +299,10 @@ class MrtTableDump2:
             self.entries.append(e)
             break  # speed optimization - ONLY MAP FIRST; shaves 50% time
             buf = buf[len(e):]
-        #assert not buf  # assert fully parsed; will now fail becasue of break
+        #assert not buf  # assert fully parsed; will now fail because of optimization, so commented
 
-    def __str__(self):
-        return 'MrtTableDump2 {seq:%d, prefix:%s, entries:%d}' % (self.seq, self.s_prefix, len(self.entries))
+    def __repr__(self):
+        return 'MrtTableDump2(seq:%d, prefix:%s, entries:%d+)' % (self.seq, self.s_prefix, len(self.entries))
 
     class T2RibEntry:
         def __init__(self, buf):
@@ -308,8 +328,8 @@ class MrtTableDump2:
         def __len__(self):
             return 8 + self.attr_len
 
-        def __str__(self):
-            return 'T2RibEntry {attr_len: %d, peer: %d, orig_ts: %d}' % (self.attr_len, self.peer, self.orig_ts)
+        def __repr__(self):
+            return 'T2RibEntry(attr_len:%d, peer:%d, orig_ts:%d)' % (self.attr_len, self.peer, self.orig_ts)
 
 
 class BgpAttribute:
@@ -347,8 +367,8 @@ class BgpAttribute:
     def __len__(self):
         return 2 + (2 if self._has_ext_len() else 1) + len(self.data)
 
-    def __str__(self):
-        return 'BGPAttribute {type:%d, flags:%d, len(data):%d}' % (self.bgp_type, self.flags, len(self.data))
+    def __repr__(self):
+        return 'BGPAttribute(type:%d, flags:%d, data_len:%d)' % (self.bgp_type, self.flags, len(self.data))
 
     def path_detail(self):
         assert self.bgp_type == self.ATTR_AS_PATH
@@ -367,12 +387,8 @@ class BgpAttribute:
                 buf = buf[len(seg):]
                 self.pathsegs.append(seg)
 
-        def __str__(self):
-            s = " "
-            for path in self.pathsegs:
-                s += "set" if path.seg_type == self.BgpPathSegment.AS_SET else "seg"
-                s += "(%d)<" % len(path)
-            return 'BgpAttrASPath {pathsegs: ' + s[:-1] + '}'
+        def __repr__(self):
+            return "BgpAttrASPath(%s)" % ", ".join(str(path) for path in self.pathsegs)
 
         @property
         def origin_as(self):
@@ -406,16 +422,27 @@ class BgpAttribute:
             # CONCLUSION:
             #  i- go to the last path segment, among the many.
             #  ii- if it's a sequence, return the last AS; if it's a set, return all ASes; callee can choose any
+            #  updated 2014/11/02: changes so as not to return as bogus AS the origin
 
-            origin = None
             #  assert: sequence & sets can interleave; but at least one sequence before them will be a set!
             assert self.pathsegs[0].seg_type == self.BgpPathSegment.AS_SEQUENCE
-            last_seg = self.pathsegs[-1]
-            if last_seg.seg_type == self.BgpPathSegment.AS_SEQUENCE:
-                origin = int(last_seg.path[-1])
-            elif last_seg.seg_type == self.BgpPathSegment.AS_SET:
-                origin = set(last_seg.path)
-            assert origin  # should not be 0 (no asn 0), or None, or an empty set
+
+            origin = None
+            for last_seg in reversed(self.pathsegs):
+                if last_seg.seg_type == self.BgpPathSegment.AS_SEQUENCE:
+                    # for sequence, return last AS as origin; if that's bogus, use preceding
+                    for asn in reversed(last_seg.path):
+                        if not is_asn_bogus(asn):
+                            origin = int(asn)
+                            break
+                elif last_seg.seg_type == self.BgpPathSegment.AS_SET:
+                    # for sets: return all non-bogus routes; the callee can choose any
+                    origin = set(asn for asn in last_seg.path if not is_asn_bogus(asn))
+                # we will typically break now, except in rare cases where all of seq/set was bogus. then repeat
+                if origin:
+                    break
+
+            assert origin  # eventually, should not be 0 (no asn 0), or None, or an empty set
             return origin
 
         class BgpPathSegment:
@@ -442,9 +469,11 @@ class BgpAttribute:
                 return 2 + self.as_len * len(self.path)
 
             def __str__(self):
-                # for path-sequences: [as1, as2, as3], for path-sets: set([as1, as2, as3])
+                # for path-sequences: sequence[as1, as2, as3], for set[as1, as2, as3]
                 assert self.seg_type in (self.AS_SET, self.AS_SEQUENCE)
-                s = '' if self.seg_type == self.AS_SEQUENCE else 'set('
+                s = 'sequence' if self.seg_type == self.AS_SEQUENCE else 'set'
                 s += str(self.path)
-                s += '' if self.seg_type == self.AS_SEQUENCE else ')'
                 return s
+
+            def __repr__(self):
+                return "BgpPathSegment-" + str(self)

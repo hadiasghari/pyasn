@@ -13,6 +13,8 @@ FOR RC STATUS:
     * test with RIPE RIS (http://www.ripe.net/data-tools/stats/ris/ris-raw-data) -- different views most likely cause
     * understand nature of multiple entries in MRT-records. we use only first.
       (actually all have same origin in TD1 test, so this shouldn't be it either)
+    * in some instances, the difference was due to BOGON ASes. but none of these are actually in the test cases
+
 * test for windows (done - tested with vs2010 + python3.4 / miniconda3, via pip and direct)
 * ipv6 support:
 		(a) test radix - manually add/delete?
@@ -21,6 +23,15 @@ FOR RC STATUS:
 * perhaps, profiling pyasn.mrtx code
 
 OTHER:
-* upload our own asndb files (after recreation) to 3TU Datacenter
+* upload our own asndb files to 3TU Datacenter
+    - this can be done after recreation of current IPASNDAT files (bogus & set routes changed - about 200/file)
+    - and perhaps also binary format check.
 
 * installer: cleanup not working? what is our "coverage" ?
+
+
+programatically accessing cymru whois if useful (- although we have our own funciton):
+       https://github.com/csirtfoundry/BulkWhois
+       https://github.com/trolldbois/python-cymru-services
+       https://github.com/JustinAzoff/python-cymruwhois
+

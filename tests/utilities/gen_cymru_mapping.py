@@ -29,6 +29,7 @@ TEST_RESOURCES_PATH = os.path.dirname(__file__, "../data")
 
 def as_loopkup_teamcymru(ip, date):
     datetime_string = date.strftime("%Y-%m-%d %H:%M:%S GMT")
+    # note: route-views uses UTC, and we normally download files of 06:00; thus 6:00:00 GMT should be passed to cymru
     result = subprocess.check_output(["whois",  '-h', ('%s' % 'whois.cymru.com'), ' -f %s %s' % (ip, datetime_string)])
     result = result.decode().split("|")[0].strip()
     return result if result != "NA" else None
