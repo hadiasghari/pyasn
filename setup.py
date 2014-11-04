@@ -21,6 +21,9 @@ extra_kwargs = {'ext_modules': [ext]}
 reqs = []
 if sys.version_info[0] == 2 and sys.version_info[1] < 7:
     reqs.append('ordereddict')
+if sys.version_info[0] == 2:
+    reqs.append('backport-ipaddress')
+
 
 utils = glob.glob('pyasn-utils/*.py')
 

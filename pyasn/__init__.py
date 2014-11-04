@@ -17,6 +17,8 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import sys
+from ipaddress import collapse_addresses, ip_address
 from collections import defaultdict
 from .pyasn_radix import Radix
 import re
@@ -91,6 +93,15 @@ class pyasn(object):
                 self._as_prefixes[a].add(px)
         #
         return self._as_prefixes[int(asn)] if int(asn) in self._as_prefixes else None
+
+    def get_as_prefixes_effective(self, asn):
+        """
+        Returns the effective address space of given ASN by removing all overlaps among the prefixes
+        :return: The effective prefixes resulting from removing overlaps of the given ASN's prefixes
+        """
+        prefixes = self.get_as_prefixes(asn)
+        non_overlapping_prefixes = collapse_addresses([ip_address(i) for i in prefixes])
+        return [i.compressed for i in non_overlapping_prefixes]
 
     def get_as_name(self, asn):
         """
