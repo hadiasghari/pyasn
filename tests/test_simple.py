@@ -108,3 +108,19 @@ class LoadRadixPickle(TestCase):
         self.assertEqual(set(prefixes1), set(['130.161.0.0/16', '131.180.0.0/16', '145.94.0.0/16']))  # TUDelft prefixes
         self.assertEqual(prefixes1, prefixes2)  # should cache, and hence return same
         self.assertEqual(prefixes1, prefixes3)  # string & int for asn should return the same
+
+
+    def test_get_prefixes2(self):
+        """
+            Tests get_as_prefixes() on a border case (bug report #10)
+        """
+        # why this border-case is interesting:
+        #$ cat ipasn_20141028.dat | grep 13289$
+        #82.212.192.0/18	13289
+        #$ cat ipasn_20141028.dat | grep 82.212.192.0
+        #82.212.192.0/18	13289
+        #82.212.192.0/19	29624
+        prefixes = self.asndb.get_as_prefixes(13289)
+        self.assertEqual(set(prefixes), set(['82.212.192.0/18']))
+        prefixes = self.asndb.get_as_prefixes(11018)
+        self.assertEqual(set(prefixes), set(['216.69.64.0/19']))

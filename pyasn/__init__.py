@@ -89,8 +89,11 @@ class pyasn(object):
             # build full dictionary of {asn: set(prefixes)}, and cache it for subsequent calls
             self._as_prefixes = defaultdict(set)
             for px in self.radix.prefixes():
-                a = self.lookup(px.split('/')[0])[0]
-                self._as_prefixes[a].add(px)
+                ip, mask =  px.split('/')  # todo: ipv6?
+                rn = self.radix.search_exact(ip, masklen=int(mask))
+                # we walk the radix-tree by going through all prefixes. it is very important to use search-exact
+                # in the process, with the correct mask, (to avoid bug #10)
+                self._as_prefixes[rn.asn].add(px)
         #
         return self._as_prefixes[int(asn)] if int(asn) in self._as_prefixes else None
 
