@@ -18,7 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 import sys
-from ipaddress import collapse_addresses, ip_address
+from ipaddress import collapse_addresses, ip_network
 from collections import defaultdict
 from .pyasn_radix import Radix
 import re
@@ -103,7 +103,7 @@ class pyasn(object):
         :return: The effective prefixes resulting from removing overlaps of the given ASN's prefixes
         """
         prefixes = self.get_as_prefixes(asn)
-        non_overlapping_prefixes = collapse_addresses([ip_address(i) for i in prefixes])
+        non_overlapping_prefixes = collapse_addresses([ip_network(i) for i in prefixes])
         return [i.compressed for i in non_overlapping_prefixes]
 
     def get_as_name(self, asn):
