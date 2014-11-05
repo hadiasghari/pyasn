@@ -96,7 +96,6 @@ class LoadRadixPickle(TestCase):
         self.assertEqual(0, pyasn.pyasn.convert_asdot_to_32bit_asn("AS0"))
         self.assertEqual(131393, pyasn.pyasn.convert_asdot_to_32bit_asn("AS2.321"))
 
-
     def test_get_tud_prefixes(self):
         """
             Tests if correct prefixes are returned for a predetermined AS
@@ -108,7 +107,6 @@ class LoadRadixPickle(TestCase):
         self.assertEqual(set(prefixes1), set(['130.161.0.0/16', '131.180.0.0/16', '145.94.0.0/16']))  # TUDelft prefixes
         self.assertEqual(prefixes1, prefixes2)  # should cache, and hence return same
         self.assertEqual(prefixes1, prefixes3)  # string & int for asn should return the same
-
 
     def test_get_prefixes2(self):
         """
@@ -124,3 +122,7 @@ class LoadRadixPickle(TestCase):
         self.assertEqual(set(prefixes), set(['82.212.192.0/18']))
         prefixes = self.asndb.get_as_prefixes(11018)
         self.assertEqual(set(prefixes), set(['216.69.64.0/19']))
+
+    def test_get_tud_effective_prefixes(self):
+        prefixes1 = self.asndb.get_as_prefixes_effective(1128)
+        self.assertEqual(set(prefixes1), set(['130.161.0.0/16', '131.180.0.0/16', '145.94.0.0/16']))  # TUDelft prefixes
