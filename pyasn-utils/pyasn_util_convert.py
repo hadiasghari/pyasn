@@ -30,26 +30,27 @@ from __future__ import print_function, division
 from pyasn import mrtx, __version__
 from bz2 import BZ2File
 from time import time
-from sys import argv, exit
+from sys import argv, exit, stdout
 from glob import glob
 from datetime import datetime, timedelta
 
 print('MRT RIB log importer %s' % __version__)
 
-if len(argv) not in (4, 5) or argv[1] not in ('--single', '--bulk'):
+if len(argv) not in (4, 5, 6) or argv[1] not in ('--single', '--bulk'):
     # todo: rewrite using argparse
-    print('Usage:  pyasn_convert_rib.py  --single  ribdump.bz2  ipasn.dat(.bin) [--binary]')
+    print('Usage:  pyasn_convert_rib.py  --single  ribdump.bz2  ipasn.dat(.bin) [--binary] [--no-progress]')
     print('        pyasn_convert_rib.py  --bulk START_DATE  END_DATE [--binary]')
     print('\n        This script converts MRT/RIB export (downloadable from RouteViews or RIPE RIS) to IPASN-databases')
     print('          For bulk mode, dates should be in yyyy-mm-dd format, and files saved into current folder.')
     print('          Use the binary switch to save the output in binary format.')
     exit()
 
-binary_output = '--binary' in argv
+binary_output = '--binary' in argv[4:]
 
 if argv[1] == '--single':
     f = BZ2File(argv[2], 'rb')
-    dat = mrtx.parse_mrt_file(f, print_progress=True)
+    print_progress = '--no-progress' not in argv[4:]
+    dat = mrtx.parse_mrt_file(f, print_progress=print_progress)
     f.close()
     if not binary_output:
         mrtx.dump_prefixes_to_text_file(dat, argv[3], argv[2])
@@ -60,12 +61,13 @@ if argv[1] == '--single':
 
 assert argv[1] == '--bulk'
 try:
-    dt = datetime.strptime(argv[1], '%Y-%m-%d').date()
-    dt_end = datetime.strptime(argv[2], '%Y-%m-%d').date()
+    dt = datetime.strptime(argv[2], '%Y-%m-%d').date()
+    dt_end = datetime.strptime(argv[3], '%Y-%m-%d').date()
 except ValueError:
     print('Malformed date. Try yyyy-mm-dd')
     exit()
 print('Starting bulk RIB conversion, from %s to %s...' % (dt, dt_end))
+stdout.flush()
 st = time()
 
 while dt <= dt_end:
@@ -80,6 +82,7 @@ while dt <= dt_end:
     dump_file = files[0]
     f = BZ2File(dump_file, 'rb')
     print("%s... " % dump_file[4:-4])
+    stdout.flush()
     dat = mrtx.parse_mrt_file(f)
     f.close()
     if not binary_output:
