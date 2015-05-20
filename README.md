@@ -90,12 +90,12 @@ and parsing them using provided scripts that tail the BGP AS-Path. This can be d
     pyasn_util_convert.py --single <Downloaded RIB File> <ipasn_db_file_name>
 
 
-**NOTE** These scripts are by default installed to ``/usr/local/bin`` and can be executed directly. If you installed 
+**NOTE:** These scripts are by default installed to ``/usr/local/bin`` and can be executed directly. If you installed 
 the package to a user directory, these scripts will not be on the path and you will have to invoke them by navigating
 to the folder in which they have been copied (e.g. ``~/.local/bin``).
 
-We also provide download links to a large number of previously generated IPASN data files. They are weekly 
-snapshots of the Routeviews data, from 2005 onwards. They are available here: 
+We also provide download links to a large number of previously generated IPASN data files. These are based on
+weekly  snapshots of the Routeviews data from 2005-2015, accessible here: 
 http://data.3tu.nl/repository/uuid:d4d23b8e-2077-4592-8b47-cb476ad16e12
 
 
