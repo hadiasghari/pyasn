@@ -25,18 +25,18 @@ import logging
 
 FAKE_IPASN_DB_PATH = os.path.join(os.path.dirname(__file__), "../data/ipasn.fake")
 IPASN_DB_PATH = os.path.join(os.path.dirname(__file__), "../data/ipasn_20140513.dat")
+IPASN6_DB_PATH = os.path.join(os.path.dirname(__file__), "../data/ipasn6_20151101.dat")
 logger = logging.getLogger()
 
 
-class LoadRadixPickle(TestCase):
+class TestSimple(TestCase):
     asndb = pyasn.pyasn(IPASN_DB_PATH)
     asndb_fake = pyasn.pyasn(FAKE_IPASN_DB_PATH)
 
-    #TODO: check a few from tud's ranges
-    #TODO: Check IPv6  at minimum, manually add/remove from the data
-    #TODO: Check a few ASN32 (asdots)
-    #TODO: Read and load binary ipasn db.
-    #TODO: check as names
+    # Tests loading radix file; a few IPs from TUD raneg; ASN32 (asdots) formats.
+    # TODO: Read and load binary ipasn db.
+    # TODO: check as names
+    # TODO: write test cases for .get_as_prefixes_effective()
 
     def test_consistency(self):
         """
@@ -126,3 +126,38 @@ class LoadRadixPickle(TestCase):
     def test_get_tud_effective_prefixes(self):
         prefixes1 = self.asndb.get_as_prefixes_effective(1128)
         self.assertEqual(set(prefixes1), set(['130.161.0.0/16', '131.180.0.0/16', '145.94.0.0/16']))  # TUDelft prefixes
+
+
+    def test_address_family(self):
+        """
+            Tests if pyasn can determine correct and incorrect IPv4/IPv6 addresses (bug #14)
+        """
+        # the following should not raise
+        asn, prefix = self.asndb.lookup('8.8.8.8')
+        asn, prefix = self.asndb.lookup('2001:500:88:200::8')
+        
+        # the following should raise 
+        # assertRaisesRegexp requires Py2.7+ (fails on Py 2.6)
+        self.assertRaisesRegexp(ValueError, "v4", self.asndb.lookup, '8.8.8.800')                            
+        self.assertRaisesRegexp(ValueError, "v6", self.asndb.lookup, '2001:500g:88:200::8')
+
+
+    def test_ipv6(self):
+        """
+            Tests if IPv6 addresseses are lookedup correctly 
+        """
+        db = pyasn.pyasn(IPASN6_DB_PATH)
+        known_ips = [
+            # First three IPs sugested by sebix (bug #14). Confirmed AS on WHOIS
+            ('2001:41d0:2:7a6::1', 16276),   # OVH IPv6, AS16276
+            ('2002:2d22:b585::2d22:b585', 6939),  
+                 # WHOIS states: IPv4 endpoint(45.34.181.133) of a 6to4 address. AS6939 = Hurricane Electric
+            ('2a02:2770:11:0:21a:4aff:fef0:e779', 196752),  # TILAA, AS196752
+            ('2607:f8b0:4006:80f::200e', 15169),  # GOOGLE AAAA
+            ('d::d', None),  # Random unused IPv6
+        ]
+
+        for ip, known_as in known_ips:
+            asn, prefix = db.lookup(ip)
+            self.assertEqual(asn, known_as)
+

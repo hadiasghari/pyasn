@@ -18,8 +18,7 @@ This makes *pyasn* much faster than online dig/whois/json lookups.
 The module is written in C and Python, and cross-compiles on Linux and Windows. Underneath, it uses a radix tree 
 data structure for storage of IP addresses. In the current version, it borrows code from *py-radix* to support 
 both IPv4 and IPv6 network prefixes. The current release is a beta. Compared to the previous version, it provides 
-support for Python 2 and 3; adds new functionality, performance improvements, and unit-tests. IPv6 support is 
-still under construction and will be provided after beta testing is completed.
+support for Python 2 and 3; adds new functionality, performance improvements, and unit-tests. 
 
 *pyasn* is developed and maintained by researchers at the Economics of Cybersecurity research group at Delft 
 University of Technology (http://econsec.tbm.tudlft.nl). The package is used on an almost daily basis and bugs 

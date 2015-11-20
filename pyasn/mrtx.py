@@ -35,7 +35,7 @@ Other objects:
 """
 
 from __future__ import print_function, division
-from socket import inet_ntoa, inet_aton
+from socket import inet_ntoa, inet_aton, inet_ntop, AF_INET, AF_INET6
 from struct import unpack, pack
 from time import time, asctime
 from sys import stderr, version_info
@@ -56,7 +56,7 @@ Parses an MRT/RIB dump file.\n
 \n
 The originating ASN is usually one; however, for some prefixes (explained in the module), it's unclear, among a few.
 \n
-Both version 1 & 2 TABLE_DUMPS are supported, as well as 32bit ASNs. However, this module doesn't yet support IPv6.
+Both version 1 & 2 TABLE_DUMPS are supported, as well as 32bit ASNs. IPv6 implemented for TD2.
 """
     results = OrderedDict()
     n, stime = 0, time()
@@ -99,6 +99,8 @@ Both version 1 & 2 TABLE_DUMPS are supported, as well as 32bit ASNs. However, th
     #
     if '0.0.0.0/0' in results:
         del results['0.0.0.0/0']  # remove default route - can be parameter
+    if '::/0' in results:
+        del results ['::/0']  # similarly for IPv6
     return results
 
 
@@ -108,7 +110,12 @@ def dump_prefixes_to_text_file(ipasn_data, out_text_file_name, orig_mrt_name, de
     else:
         fw = open(out_text_file_name, 'wt', encoding='ASCII')
     fw.write('; IP-ASN32-DAT file\n; Original file : %s\n' % orig_mrt_name)
-    fw.write('; Converted on  : %s\n; Prefixes      : %s\n; \n' % (asctime(), len(ipasn_data)))
+    n4, n6 = 0, 0
+    for prefix, origin in ipasn_data.items():
+        n6 += 1 if ':' in prefix else 0
+        n4 += 0 if ':' in prefix else 1
+    assert n4 + n6 == len(ipasn_data)
+    fw.write('; Converted on  : %s\n; Prefixes-v4   : %s\n; Prefixes-v6   : %s\n; \n' % (asctime(), n4, n6))
     for prefix, origin in ipasn_data.items():
         if not debug_write_sets and isinstance(origin, set):
             origin = list(origin)[0]  # get an AS randomly, or the only AS if just one, from the set
@@ -138,7 +145,8 @@ def dump_prefixes_to_binary_file(ipasn_data, out_bin_file_name, orig_mrt_name, e
         if isinstance(origin, set):
             origin = list(origin)[0]  # get an AS randomly, or the only AS if just one, from the set
         network, mask = prefix.split('/')
-        fw.write(inet_aton(network))  # for IPv6: need more bytes here
+        assert ':' not in network   # TODO-IPv6: need more bytes here
+        fw.write(inet_aton(network)) 
         fw.write(pack('B', int(mask)))
         fw.write(pack('I', origin))
         n += 1
@@ -170,7 +178,7 @@ def is_asn_bogus(asn):
 # MRT format spec at: http://tools.ietf.org/html/rfc6396
 # BGP attribute spec at: http://tools.ietf.org/html/rfc4271
 
-# IPv6 warning: currently this module has only IPv4 support. For IPv6, changes are needed, partially marked in code.
+# HA 2015/11/19 started work on IPv6 for Table_Dump_V2
 
 # Performance notes:
 #  -this code isn't super fast, but that's OK because it's run once to convert/parse the MRT files
@@ -185,11 +193,10 @@ class MrtRecord:
     TYPE_TABLE_DUMP = 12
     TYPE_TABLE_DUMP_V2 = 13
     T1_AFI_IPv4 = 1
+    T1_AFI_IPv6 = 2
     T2_PEER_INDEX_TABLE = 1
     T2_RIB_IPV4_UNICAST = 2
-    # For IPv6, these types are needed
-    # T1_AFI_IPv6 = 2
-    # T2_RIB_IPV6_UNICAST = 4
+    T2_RIB_IPV6_UNICAST = 4
 
     def __init__(self, header):
         self.ts, self.type, self.sub_type, self.data_len = unpack('>IHHI', header)
@@ -206,12 +213,15 @@ class MrtRecord:
         buf = f.read(mrt.data_len)  # read table-data
         assert len(buf) == mrt.data_len
         if mrt.type == MrtRecord.TYPE_TABLE_DUMP:
-            assert mrt.sub_type == MrtRecord.T1_AFI_IPv4  # only allow this
+            assert mrt.sub_type in (MrtRecord.T1_AFI_IPv4, MrtRecord.T1_AFI_IPv6)  
             mrt.table = MrtTableDump1(buf, mrt.sub_type)
         elif mrt.type == MrtRecord.TYPE_TABLE_DUMP_V2:
-            assert mrt.sub_type in (MrtRecord.T2_PEER_INDEX_TABLE, MrtRecord.T2_RIB_IPV4_UNICAST)  # only allow these
-            # among them, T2_PEER_INDEX_TABLE provides BGP ID of the collector, and list of peers; we don't use it
-            if mrt.sub_type == MrtRecord.T2_RIB_IPV4_UNICAST:
+            # only allow these types
+            # T2_PEER_INDEX_TABLE provides BGP ID of the collector and list of peers; we don't use it
+            assert mrt.sub_type in (MrtRecord.T2_PEER_INDEX_TABLE, 
+                                    MrtRecord.T2_RIB_IPV4_UNICAST,
+                                    MrtRecord.T2_RIB_IPV6_UNICAST)  
+            if mrt.sub_type in (MrtRecord.T2_RIB_IPV4_UNICAST, MrtRecord.T2_RIB_IPV6_UNICAST):
                 mrt.table = MrtTableDump2(buf, mrt.sub_type)
         else:
             raise Exception("MrtTableHeader received an unknown MRT table dump TYPE <%d>!" % mrt.type)
@@ -246,7 +256,8 @@ class MrtTableDump1:
     """MrtTableDump1: class to hold and parse MRT Table_Dumps records"""
 
     def __init__(self, buf, sub_type1):
-        assert sub_type1 == MrtRecord.T1_AFI_IPv4  # for IPv6: prefix-size (16B vs 4B) & way handled is different
+        # TODO-IPv6: to implement. possibly need "QQ" in the unpack (16B prefix), and inet_ntop() after
+        assert sub_type1 == MrtRecord.T1_AFI_IPv4  
         self.view, self.seq, prefix, mask, self.status, self.orig_ts, self.peer_ip, self.peer_as, self.attr_len\
             = unpack('>HHIBBIIHH', buf[:22])
         self.s_prefix = "%s/%d" % (inet_ntoa(pack('>I', prefix)), mask)
@@ -282,15 +293,19 @@ class MrtTableDump2:
     # Also, they permit a single MRT record to encode multiple RIB table entries for a single prefix.
 
     def __init__(self, buf, sub_type2):
+        assert sub_type2 in (MrtRecord.T2_RIB_IPV4_UNICAST, MrtRecord.T2_RIB_IPV6_UNICAST)
         self.seq, mask = unpack('>IB', buf[0:5])
         octets = (mask + 7) // 8
+        if sub_type2 == MrtRecord.T2_RIB_IPV4_UNICAST:
+            assert octets <= 4  
+            padding = bytes(4-octets) if not IS_PYTHON2 else '\0'*(4-octets)
+            s_prefix = inet_ntoa(buf[5:5+octets] + padding)  # faster than IPv4address class, not sure why
+        elif sub_type2 == MrtRecord.T2_RIB_IPV6_UNICAST:
+            assert octets <= 16 
+            padding = bytes(16-octets) if not IS_PYTHON2 else '\0'*(16-octets)  
+            s_prefix = inet_ntop(AF_INET6, buf[5:5+octets] + padding) 
 
-        assert sub_type2 == MrtRecord.T2_RIB_IPV4_UNICAST  # only IPv4 support now. For IPv6, parts need change
-        assert octets <= 4  # e.g., more octets for ipv6
-        padding = bytes(4-octets) if not IS_PYTHON2 else '\0'*(4-octets)
-        s_prefix = inet_ntoa(buf[5:5+octets] + padding)  # faster than IPv4address class, not sure why
         self.s_prefix = s_prefix + "/%d" % mask
-
         self.entry_count = unpack('>H', buf[5 + octets:7 + octets])[0]
         buf = buf[7 + octets:]
         self.entries = []
@@ -438,6 +453,8 @@ class BgpAttribute:
                 elif last_seg.seg_type == self.BgpPathSegment.AS_SET:
                     # for sets: return all non-bogus routes; the callee can choose any
                     origin = set(asn for asn in last_seg.path if not is_asn_bogus(asn))
+                else:
+                    raise Exception("Invalid/Legacy BGP Path Segment: %d" % last_seg.seg_type)
                 # we will typically break now, except in rare cases where all of seq/set was bogus. then repeat
                 if origin:
                     break
@@ -448,13 +465,15 @@ class BgpAttribute:
         class BgpPathSegment:
             AS_SET = 1  # AS_SET: unordered set of ASes a route in the UPDATE message has traversed
             AS_SEQUENCE = 2  # AS_SEQUENCE: ordered set of ASes a route in the UPDATE message has traversed
+            AS_CONFED_SEQUENCE = 3  # legacy, appears rarely, harmelss, moved check to .origin_as(). (bug #13)
+            AS_CONFED_SET = 4
             #  stats on 100,000: {1: 1196, 2: 3677845}.
 
             def __init__(self, data, is32):
                 self.seg_type = data[0] if not IS_PYTHON2 else ord(data[0])
                 cnt = data[1] if not IS_PYTHON2 else ord(data[1])
                 data = data[2:]
-                assert self.seg_type in (self.AS_SET, self.AS_SEQUENCE)
+                assert self.seg_type in (self.AS_SET, self.AS_SEQUENCE, self.AS_CONFED_SEQUENCE, self.AS_CONFED_SET)
                 self.path = []
                 self.as_len = 4 if is32 else 2
                 for i in range(cnt):

@@ -557,17 +557,19 @@ sanitise_mask(u_char *addr, u_int masklen, u_int maskbits)
 // HA - 2014/10/30. This function was causing all the slowness in the new version; 
 //      I've rewritten it to use inet_pton() instead of the previous getaddrinfo() call.
 //      In the process, I also removed some code paths that didn't get called. 
-//      All tests still run correctly. However, the IPv6 part now has one extra TODO
+//      All tests still run correctly. 
+// HA - 2016/11/19 made minor change to determine if V4 or V6 address
 prefix_t*
 prefix_pton(const char *string, long len, const char **errmsg)     
 {
         unsigned char buf[sizeof(struct in6_addr)];         
         prefix_t *ret = NULL;
-        int a_family = AF_INET; // TODO: for IPv6, determine this automatically, or get as parameter
+        int a_family = (strchr(string, ':') ? AF_INET6 : AF_INET); 
         int max_prefix = 0;
 
         if (inet_pton(a_family, string, buf) <= 0) {  
-			*errmsg = "inet_pton() returned error";
+			*errmsg = (a_family == AF_INET ? "inet_pton(v4) returned error":
+                                             "inet_pton(v6) returned error");
 			return NULL;
 		}
 

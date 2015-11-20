@@ -14,16 +14,17 @@ FOR RC STATUS:
     * understand nature of multiple entries in MRT-records. we use only first.
       (actually all have same origin in TD1 test, so this shouldn't be it either)
     * in some instances, the difference was due to BOGON ASes. but none of these are actually in the test cases
+    * CHECK ISSUE #16 for some ideas
 
 * test for windows (done - tested with vs2010 + python3.4 / miniconda3, via pip and direct)
-* ipv6 support:
-		(a) test radix - manually add/delete?
-		(b) mrtx code would need it to be added - marked in code
+* ipv6 support: (done - tested with updates in mrtx, radix, lookups, tests)
+		- tests on Windows left
 * combine pyasn-util-* scripts into one script with good argument parsing
 * perhaps, profiling pyasn.mrtx code
+* perhaps, speed issues with .get_as_prefixes_effective()
 
 OTHER:
-* upload our own asndb files to 3TU Datacenter
+* upload our own asndb files to 3TU Datacenter (DONE -- but not needs update)
     - this can be done after recreation of current IPASNDAT files (bogus & set routes changed - about 200/file)
     - and perhaps also binary format check.
 
