@@ -18,8 +18,7 @@ This makes *pyasn* much faster than online dig/whois/json lookups.
 The module is written in C and Python, and cross-compiles on Linux and Windows. Underneath, it uses a radix tree 
 data structure for storage of IP addresses. In the current version, it borrows code from *py-radix* to support 
 both IPv4 and IPv6 network prefixes. The current release is a beta. Compared to the previous version, it provides 
-support for Python 2 and 3; adds new functionality, performance improvements, and unit-tests. IPv6 support is 
-still under construction and will be provided after beta testing is completed.
+support for Python 2 and 3; adds new functionality, performance improvements, and unit-tests. 
 
 *pyasn* is developed and maintained by researchers at the Economics of Cybersecurity research group at Delft 
 University of Technology (http://econsec.tbm.tudlft.nl). The package is used on an almost daily basis and bugs 
@@ -83,19 +82,20 @@ like this: ::
     1.0.129.0/24	23969
     ...
 
-IPASN data files can be created by downloading BGP/MRT dumps from Routeviews, and converting them. This can be done 
-very easily using provided utility scripts, as follows: ::
+IPASN data files can be created by downloading BGP/MRT dumps from Routeviews (or similar sources), 
+and parsing them using provided scripts that tail the BGP AS-Path. This can be done simply as follows: ::
 
     pyasn_util_download.py --latest
     pyasn_util_convert.py --single <Downloaded RIB File> <ipasn_db_file_name>
 
 
-**NOTE** These scripts are by default installed to ``/usr/local/bin`` and can be executed directly. If you installed 
+**NOTE:** These scripts are by default installed to ``/usr/local/bin`` and can be executed directly. If you installed 
 the package to a user directory, these scripts will not be on the path and you will have to invoke them by navigating
 to the folder in which they have been copied (e.g. ``~/.local/bin``).
 
-Alternatively, we provide download links to a large number of already generated IPASN data files. They are weekly 
-snapshots of the Routeviews data, from 2006 onwards. You can download and directly use these from: *[TODO-LINK]*
+We also provide download links to a large number of previously generated IPASN data files. These are based on
+weekly  snapshots of the Routeviews data from 2005-2015, accessible here: 
+http://data.3tu.nl/repository/uuid:d4d23b8e-2077-4592-8b47-cb476ad16e12
 
 
 Performance Tip
@@ -106,6 +106,7 @@ for better performance.
 
 Alternatively, you can convert the IPASN data files to binary format and load them using the binary load option to 
 improve load time (in beta testing). You can save files to binary format using the ``--binary`` of the utility script
+
 
 Uninstalling pyasn
 ==================
@@ -148,6 +149,7 @@ run with the following command: ::
 
 This beta release has been tested under python version 2.6, 2.7, 3.3 and 3.4. We appreciate contributions towards 
 testing *pyasn*! Unit Tests are particularly appreciated.
+
 
 License & Acknowledgments
 =========================

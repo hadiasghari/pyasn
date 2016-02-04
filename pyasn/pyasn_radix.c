@@ -631,7 +631,7 @@ Radix_load_ipasndb(RadixObject *self, PyObject *args, PyObject *kw_args)
     }       
 	
     if (binary) {
-        // known issue: the binary-ipasndb-load only supports IPv4 addresses. it's trivial to fix if needed.
+        // TODO-IPv6: the binary-ipasndb-load only supports IPv4 addresses. trivial to fix if needed.
         size_t elem, i, n_prefixes;
         char buf[1024], addr[16], tmp[4];           
         // read binary header. minimum 12 bytes. check for magic number, version (1), n_records, and skip the comment.
@@ -686,7 +686,7 @@ Radix_load_ipasndb(RadixObject *self, PyObject *args, PyObject *kw_args)
             if (asn == 0 || prefixlen == 0)
                 goto parse_or_memory_error;                      
                         
-            if ((prefix = prefix_pton(buf, prefixlen, &err_msg_i)) == NULL)  
+            if ((prefix = prefix_pton(buf, prefixlen, &err_msg_i)) == NULL)  // works with IPv4 and IPv6 addresses
                 goto parse_or_memory_error;                 
             //assert(prefix->family == AF_INET || prefix->family == AF_INET6);
             

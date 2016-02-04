@@ -36,8 +36,8 @@ if version_info[0] < 3:
 else:
     from urllib.request import urlopen
 
-if not (len(argv) == 2 and argv[1] == '--latest') and not (len(argv) == 3 and argv[1] == '--dates_from_file'):
-    print('usage: %s [--dates_from_file FILEWITHDATES] | [--latest]' % (argv[0]))
+if not (len(argv) == 2 and argv[1] == '--latest') and not (len(argv) == 3 and argv[1] == '--dates-from-file'):
+    print('usage: %s [--dates-from-file FILEWITHDATES] | [--latest]' % (argv[0]))
     print('\n       The script downloads MRT dump files from ROUTEVIEWS for the dates specified. It requires wget.')
     exit()
 
@@ -77,7 +77,7 @@ if download_mode == '--latest':
     print('\n Download complete.')
 
 
-if download_mode == '--dates_from_file':
+if download_mode == '--dates-from-file':
     dates_to_get = []
     f = open(argv[2])
     if not f:
@@ -91,7 +91,7 @@ if download_mode == '--dates_from_file':
 
     for dt in dates_to_get:
         url_dir = 'http://archive.routeviews.org/bgpdata/%d.%02d/RIBS/' % (dt.year, dt.month)
-        print('searching %s ...' % url_dir)
+        print('Searching %s for %d-%02d-%02d...' % (url_dir, dt.year, dt.month, dt.day), end=' ')
         stdout.flush()
 
         http = urlopen(url_dir)
@@ -105,7 +105,7 @@ if download_mode == '--dates_from_file':
             if ix == -1:
                 ix = html.find(str_find + '.00')  # last resort, try the one saved at midnight
                 if ix == -1:
-                    print(str(dt) + '\tERROR - NOT FOUND')
+                    print('=> ERROR - NOT FOUND.')
                     continue
 
         fname = html[ix:ix+21]
@@ -119,9 +119,13 @@ if download_mode == '--dates_from_file':
 
         url_full = url_dir + fname
         if download_mode == '--latest':
+            print()
             ret = subprocess.call(['wget',  url_full])  # non-quiet mode
         else:
+            print('downloading...', end=' ')
+            stdout.flush()
             ret = subprocess.call(['wget', '-q', url_full])  # quiet mode
+            print()
         ret = "" if ret == 0 else "[FAIL:%d]" % ret
 
         print('%s\t%s\t%s\t%s' % (dt, size, url_full, ret))

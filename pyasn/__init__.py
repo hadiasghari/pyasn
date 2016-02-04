@@ -27,8 +27,7 @@ from ._version import __version__
 
 class pyasn(object):  
     """
-    A class that does fast offline historical Autonomous System Number lookups based on IPv4 addresses.
-    IPv6 support is under development.
+    A class that does fast offline historical Autonomous System Number lookups for IPv4/IPv6 addresses.
     """
 
     def __init__(self, ip_asn_db_file, as_names_file=None, binary=False):
@@ -89,7 +88,7 @@ class pyasn(object):
             # build full dictionary of {asn: set(prefixes)}, and cache it for subsequent calls
             self._as_prefixes = defaultdict(set)
             for px in self.radix.prefixes():
-                ip, mask =  px.split('/')  # todo: ipv6?
+                ip, mask =  px.split('/')  # fine with IPv4/IPv6
                 rn = self.radix.search_exact(ip, masklen=int(mask))
                 # we walk the radix-tree by going through all prefixes. it is very important to use search-exact
                 # in the process, with the correct mask, (to avoid bug #10)
@@ -103,8 +102,11 @@ class pyasn(object):
         :return: The effective prefixes resulting from removing overlaps of the given ASN's prefixes
         """
         prefixes = self.get_as_prefixes(asn)
-        non_overlapping_prefixes = collapse_addresses([ip_network(i) for i in prefixes])
-        return [i.compressed for i in non_overlapping_prefixes]
+        if not prefixes:  # issue 12
+            return None
+        non_overlapping_prefixes4 = collapse_addresses([ip_network(i) for i in prefixes if ':' not in i])
+        non_overlapping_prefixes6 = collapse_addresses([ip_network(i) for i in prefixes if ':' in i])
+        return [i.compressed for i in non_overlapping_prefixes4] + [i.compressed for i in non_overlapping_prefixes6]
 
     def get_as_name(self, asn):
         """
