@@ -17,12 +17,19 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+import os
 import sys
+import codecs
 from ipaddress import collapse_addresses, ip_network
 from collections import defaultdict
 from .pyasn_radix import Radix
 import re
 from ._version import __version__
+
+try:
+    import ujson as json
+except ImportError:
+    import json
 
 
 class pyasn(object):  
@@ -61,13 +68,18 @@ class pyasn(object):
         Under Construction, Do not use!\n
         reads autonomous system names, if present from both the text and  binary db formats
         """
-        raise Exception("Not implemented")
         # todo: test a variety of formats for fastest performance in loading & disc size
         #           - a text file with ASN & AS-NAMES
         #           - gzip of above
         #           - "anydbm"
         #           -  even pickle & compress
         # todo: how should the as-names file be stored for binary format? (one implementation already in pyhelper for this)
+        if self._asnames_file.endswith('.json'):
+            with open(self._asnames_file, 'r', encoding='utf-8') as fs:
+                return json.load(fs)
+        else:
+            ext = os.path.splitext(self._asnames_file)[-1]
+            raise Exception('asnames parser for the %s format is not supported.' % ext)
 
     def lookup(self, ip_address):
         """
@@ -114,7 +126,6 @@ class pyasn(object):
         :param asn: 32-bit ASN
         :return: the AS-Name associated with this ASN
         """
-        raise Exception("Not Implemented")
         if not self._asnames:
             raise Exception("autonomous system names not loaded during initialization")  # todo: or none?
         return self._asnames.get(asn, "???")                  
