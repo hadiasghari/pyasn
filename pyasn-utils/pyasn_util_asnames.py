@@ -20,9 +20,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import parsel
+import re
 import codecs
 import argparse
+import logging
 from sys import version_info
 
 try:
@@ -36,17 +37,25 @@ else:
     from urllib.request import urlopen
 
 
+logger = logging.getLogger(__name__)
+
 ASNAMES_URL = 'http://www.cidr-report.org/as2.0/autnums.html'
+HTML_FILENAME = "autnums.html"
+EXTRACT_ASNAME_C = re.compile(r"<a .+>AS(?P<code>.+?)\s*</a>\s*(?P<name>.*)", re.U)
 
 
 def get_parser():
     parser = argparse.ArgumentParser(description='pyasn asnames downloader')
     parser.add_argument(
-        '-i', '--html-input', dest='input',
-        help='input html file with asnames')
+        '-i', '--html-input',
+        dest='input', help='input html file with asnames')
     parser.add_argument(
         '-o', '--output', dest='output',
         help='output file name (defaults to console)')
+    parser.add_argument(
+        '-p', '--persist-html',
+        dest='persist_html', action='store_true',
+        help='persist intermediary html file? (autnums.html)', default=False)
     return parser
 
 
@@ -55,12 +64,20 @@ def main(args):
 
     # html source available?
     if args.input:
+        logger.debug("using %s as html source" % args.input)
+
         with codecs.open(args.input, encoding="utf-8") as fs:
             data = fs.read()
 
     # data is not available yet? Let's download it!
     if data is None:
+        logger.debug("fetching asn names from remote")
         data = download_asnames()
+
+        # only works if fetching from remote
+        if args.persist_html:
+            with codecs.open(HTML_FILENAME, "w", encoding='utf-8') as fs:
+                fs.write(data)
 
     # parse it to json
     data_dict = _html_to_dict(data)
@@ -76,12 +93,8 @@ def main(args):
 
 
 def __parse_asname_line(line):
-    sel = parsel.Selector(text=line)
-    as_identifier = sel.css("a::text").extract_first().strip()
-    as_number = as_identifier[2:].strip()
-    split = line.split("</a>")
-    as_name = split[-1].strip()
-    return as_number, as_name
+    match = EXTRACT_ASNAME_C.match(line)
+    return match.groups()
 
 
 def _html_to_dict(data):
@@ -93,17 +106,16 @@ def _html_to_dict(data):
     :return:
     :rtype: dict
     """
-    sel = parsel.Selector(text=data)
-    content = sel.css("pre").extract_first()
-    content = content[5:-6]
+    split = data.split("\n")
+    split = filter(lambda line: line.startswith("<a"), split)
     fn = __parse_asname_line
-    lines = content.split("\n")
-    clean_lines = filter(lambda line: line.strip(), lines)
-    lines_with_links = filter(lambda line: line.startswith('<a'), clean_lines)
-    return dict(map(fn, lines_with_links))
+    return dict(map(fn, split))
 
 
 def download_asnames():
+    """
+    Downloads and parses to utf-8 asnames html file
+    """
     http = urlopen(ASNAMES_URL)
     data = http.read()
     http.close()

@@ -18,7 +18,7 @@ ext = Extension('pyasn.pyasn_radix',
               libraries=libs)
 
 extra_kwargs = {'ext_modules': [ext]}
-reqs = ['parsel']
+reqs = []
 if sys.version_info[0] == 2 and sys.version_info[1] < 7:
     reqs.append('ordereddict')
 if sys.version_info[0] == 2:
