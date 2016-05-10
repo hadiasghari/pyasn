@@ -35,7 +35,6 @@ class TestSimple(TestCase):
 
     # Tests loading radix file; a few IPs from TUD raneg; ASN32 (asdots) formats.
     # TODO: Read and load binary ipasn db.
-    # TODO: check as names
     # TODO: write test cases for .get_as_prefixes_effective()
 
     def test_consistency(self):
@@ -160,4 +159,20 @@ class TestSimple(TestCase):
         for ip, known_as in known_ips:
             asn, prefix = db.lookup(ip)
             self.assertEqual(asn, known_as)
+
+
+    def test_asnames(self):
+        """
+            Test functionality of AS Name Lookup.
+        """
+        db_with_names = pyasn.pyasn(IPASN_DB_PATH, as_names_file="../data/asnames.json")
+        asn, prefix = db_with_names.lookup('8.8.8.8')
+        name = db_with_names.get_as_name(asn)
+        self.assertTrue(name.lower().find("google") >= 0, "ASN Name Incorrect! Should be Google")
+
+        name = db_with_names.get_as_name(-1)
+        self.assertTrue(name is None, "ASN Name Incorrect! Should be None")
+
+
+
 

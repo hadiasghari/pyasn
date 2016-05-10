@@ -76,10 +76,15 @@ class pyasn(object):
         # todo: how should the as-names file be stored for binary format? (one implementation already in pyhelper for this)
         if self._asnames_file.endswith('.json'):
             with open(self._asnames_file, 'r', encoding='utf-8') as fs:
-                return json.load(fs)
+                names = json.load(fs)
+                try:
+                    formatted_names = dict([(int(k), v) for k, v in names.items()])
+                except ValueError:
+                    raise Exception("Autonomous system names file contains non-nummeric ASNs")
+                return formatted_names
         else:
             ext = os.path.splitext(self._asnames_file)[-1]
-            raise Exception('asnames parser for the %s format is not supported.' % ext)
+            raise Exception('Autonomous system names parser does not support %s format.' % ext)
 
     def lookup(self, ip_address):
         """
@@ -127,8 +132,8 @@ class pyasn(object):
         :return: the AS-Name associated with this ASN
         """
         if not self._asnames:
-            raise Exception("autonomous system names not loaded during initialization")  # todo: or none?
-        return self._asnames.get(asn, "???")                  
+            raise Exception("Autonomous system names not loaded during initialization")
+        return self._asnames.get(asn, None)
 
     def __repr__(self):
         return "pyasn(ipasndb:'%s'; asnames:'%s') - %d prefixes" % (self._ipasndb_file, self._asnames_file, self._records)
