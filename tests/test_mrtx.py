@@ -25,6 +25,7 @@ import bz2
 from os import path
 import logging
 
+RIB_TD2_LINE_ERROR_PARTDUMP_PATH = path.join(path.dirname(__file__), "../data/bview.20140112.1600_3samples.bz2")
 RIB_TD1_PARTDUMP_PATH = path.join(path.dirname(__file__), "../data/rib.20080501.0644_firstMB.bz2")
 RIB_TD2_PARTDUMP_PATH = path.join(path.dirname(__file__), "../data/rib.20140523.0600_firstMB.bz2")
 RIB6_TD2_PARTDUMP_PATH = path.join(path.dirname(__file__), "../data/rib6.20151101.0600_only6_firstMB.bz2")
@@ -446,4 +447,19 @@ class TestMrtx(TestCase):
             Tests pyasn.mrtx.parse_mrt_file() - converts a full (TD2) RIB file with IPv6; discards output
         """
         self.dotest_converter_full(RIB6_TD2_FULLDUMP_PATH, TMP_TD2_IPASN6_PATH, None)
+
+
+    def test_skip_all_line_on_single_error_with_boolean_false(self):
+        """
+            Tests pyasn.mrtx.parse_mrt_file() with skip_record_on_error set to default(False);
+        """
+        with self.assertRaises(IndexError):
+            _ = parse_mrt_file(bz2.BZ2File(RIB_TD2_LINE_ERROR_PARTDUMP_PATH))
+
+    def test_read_all_line_on_single_error_with_boolean_true(self):
+        """
+            Tests pyasn.mrtx.parse_mrt_file() with skip_record_on_error set to True
+        """
+        res = parse_mrt_file(bz2.BZ2File(RIB_TD2_LINE_ERROR_PARTDUMP_PATH), skip_record_on_error=True)
+        self.assertEqual(len(res), 2)
 
