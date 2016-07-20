@@ -48,7 +48,7 @@ except:
 IS_PYTHON2 = (version_info[0] == 2)
 
 
-def parse_mrt_file(mrt_file, print_progress=False, debug_break_after=None):
+def parse_mrt_file(mrt_file, print_progress=False, debug_break_after=None, skip_record_on_error=False):
     """parse_file(file, print_progress=False):
 Parses an MRT/RIB dump file.\n
     in: opened dump file to use (file-object)
@@ -82,6 +82,12 @@ Both version 1 & 2 TABLE_DUMPS are supported, as well as 32bit ASNs. IPv6 implem
                 #    print("  DEBUG %s for %s" % (mrt.as_path, mrt.prefix), file=stderr)
                 origin = mrt.as_path.origin_as
                 results[mrt.prefix] = origin
+	    except IndexError:
+                if skip_record_on_error:
+                    # skip entry
+                    print("  IndexError parsing prefix '%s' ..Skipping it" % (mrt.prefix), file=stderr)  # to aid debugging
+                    continue
+                raise
             except:
                 print("  Error parsing prefix '%s'" % (mrt.prefix), file=stderr)  # to aid debugging
                 raise
