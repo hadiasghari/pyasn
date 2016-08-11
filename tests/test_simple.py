@@ -26,6 +26,7 @@ import logging
 FAKE_IPASN_DB_PATH = os.path.join(os.path.dirname(__file__), "../data/ipasn.fake")
 IPASN_DB_PATH = os.path.join(os.path.dirname(__file__), "../data/ipasn_20140513.dat")
 IPASN6_DB_PATH = os.path.join(os.path.dirname(__file__), "../data/ipasn6_20151101.dat")
+AS_NAMES_FILE_PATH = os.path.join(os.path.dirname(__file__), "../data/asnames.json")
 logger = logging.getLogger()
 
 
@@ -134,22 +135,22 @@ class TestSimple(TestCase):
         # the following should not raise
         asn, prefix = self.asndb.lookup('8.8.8.8')
         asn, prefix = self.asndb.lookup('2001:500:88:200::8')
-        
-        # the following should raise 
+
+        # the following should raise
         # assertRaisesRegexp requires Py2.7+ (fails on Py 2.6)
-        self.assertRaisesRegexp(ValueError, "v4", self.asndb.lookup, '8.8.8.800')                            
+        self.assertRaisesRegexp(ValueError, "v4", self.asndb.lookup, '8.8.8.800')
         self.assertRaisesRegexp(ValueError, "v6", self.asndb.lookup, '2001:500g:88:200::8')
 
 
     def test_ipv6(self):
         """
-            Tests if IPv6 addresseses are lookedup correctly 
+            Tests if IPv6 addresseses are lookedup correctly
         """
         db = pyasn.pyasn(IPASN6_DB_PATH)
         known_ips = [
             # First three IPs sugested by sebix (bug #14). Confirmed AS on WHOIS
             ('2001:41d0:2:7a6::1', 16276),   # OVH IPv6, AS16276
-            ('2002:2d22:b585::2d22:b585', 6939),  
+            ('2002:2d22:b585::2d22:b585', 6939),
                  # WHOIS states: IPv4 endpoint(45.34.181.133) of a 6to4 address. AS6939 = Hurricane Electric
             ('2a02:2770:11:0:21a:4aff:fef0:e779', 196752),  # TILAA, AS196752
             ('2607:f8b0:4006:80f::200e', 15169),  # GOOGLE AAAA
@@ -165,7 +166,7 @@ class TestSimple(TestCase):
         """
             Test functionality of AS Name Lookup.
         """
-        db_with_names = pyasn.pyasn(IPASN_DB_PATH, as_names_file="../data/asnames.json")
+        db_with_names = pyasn.pyasn(IPASN_DB_PATH, as_names_file=AS_NAMES_FILE_PATH)
         asn, prefix = db_with_names.lookup('8.8.8.8')
         name = db_with_names.get_as_name(asn)
         self.assertTrue(name.lower().find("google") >= 0, "ASN Name Incorrect! Should be Google")

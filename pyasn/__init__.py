@@ -32,7 +32,7 @@ except ImportError:
     import json
 
 
-class pyasn(object):  
+class pyasn(object):
     """
     A class that does fast offline historical Autonomous System Number lookups for IPv4/IPv6 addresses.
     """
@@ -75,7 +75,7 @@ class pyasn(object):
         #           -  even pickle & compress
         # todo: how should the as-names file be stored for binary format? (one implementation already in pyhelper for this)
         if self._asnames_file.endswith('.json'):
-            with open(self._asnames_file, 'r', encoding='utf-8') as fs:
+            with codecs.open(self._asnames_file, 'r', encoding='utf-8') as fs:
                 names = json.load(fs)
                 try:
                     formatted_names = dict([(int(k), v) for k, v in names.items()])
@@ -144,15 +144,15 @@ class pyasn(object):
     def __iter__(self):
         for elt in self.radix:
             yield elt
-            
+
     def __getstate__(self):
-        return [(elt.prefix, elt.asn) for elt in self]  
-        
+        return [(elt.prefix, elt.asn) for elt in self]
+
     def __setstate__(self, state):
         for prefix, asn in state:
             node = self.radix.add(prefix)
             node.asn = asn
-            
+
     def __reduce__(self):
         return Radix, (), self.__getstate__()
 
