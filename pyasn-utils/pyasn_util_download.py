@@ -37,7 +37,7 @@ else:
     from urllib.request import urlopen
 
 if not (len(argv) == 2 and (argv[1] == '--latest' or argv[1] == '--latestv6')) and not (len(argv) == 3 and argv[1] == '--dates-from-file'):
-    print('usage: %s [--dates-from-file FILEWITHDATES] | [--latest]' % (argv[0]))
+    print('usage: %s [--dates-from-file FILEWITHDATES] | [--latest | --latestv6 ]' % (argv[0]))
     print('\n       The script downloads MRT dump files from ROUTEVIEWS for the dates specified. It requires wget.')
     exit()
 
