@@ -36,20 +36,22 @@ if version_info[0] < 3:
 else:
     from urllib.request import urlopen
 
-if not (len(argv) == 2 and argv[1] == '--latest') and not (len(argv) == 3 and argv[1] == '--dates-from-file'):
-    print('usage: %s [--dates-from-file FILEWITHDATES] | [--latest]' % (argv[0]))
+if not (len(argv) == 2 and (argv[1] == '--latest' or argv[1] == '--latestv6')) and not (len(argv) == 3 and argv[1] == '--dates-from-file'):
+    print('usage: %s [--dates-from-file FILEWITHDATES] | [--latest | --latestv6 ]' % (argv[0]))
     print('\n       The script downloads MRT dump files from ROUTEVIEWS for the dates specified. It requires wget.')
     exit()
 
 download_mode = argv[1]
 
-if download_mode == '--latest':
+if download_mode == '--latest' or download_mode == '--latestv6':
     # Thanks to Vitaly Khamin (https://github.com/khamin) for suggesting this method
     DOMAIN = 'archive.routeviews.org'
     print('Connecting to ftp://' + DOMAIN)
     ftp = ftplib.FTP(DOMAIN)
     ftp.login()
-    months = sorted(ftp.nlst('bgpdata'), reverse=True)    
+    datapath = 'bgpdata'
+    if download_mode == '--latestv6': datapath = 'route-views6/bgpdata'
+    months = sorted(ftp.nlst(datapath), reverse=True)
     print("Finding latest RIB file in /%s/RIBS/ ..." % months[0])
     ftp.cwd('/%s/RIBS/' % months[0])
     fls = ftp.nlst()
@@ -59,7 +61,7 @@ if download_mode == '--latest':
         fls = ftp.nlst()
         if not fls:
             print("Cannot find file to download. Please report a bug for the script")
-            exit()            
+            exit()
     filename = max(fls)
     filesize = ftp.size(filename)
     print('Downloading %s' % (filename))
@@ -130,4 +132,3 @@ if download_mode == '--dates-from-file':
 
         print('%s\t%s\t%s\t%s' % (dt, size, url_full, ret))
         stdout.flush()
-
