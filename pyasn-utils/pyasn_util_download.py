@@ -49,8 +49,6 @@ group.add_argument('--latestv46', '-46', action='store_true', help='Grab lastest
 group.add_argument('--dates-from-file', '-f', action='store', help='Grab a specifc dates v4 data')
 args = parser.parse_args()
 
-print(args)
-
 # ftp method for latest tables
 if args.latestv4 or args.latestv6 or args.latestv46:
     # Thanks to Vitaly Khamin (https://github.com/khamin) for suggesting this method
