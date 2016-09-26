@@ -161,7 +161,6 @@ class TestSimple(TestCase):
             asn, prefix = db.lookup(ip)
             self.assertEqual(asn, known_as)
 
-
     def test_asnames(self):
         """
             Test functionality of AS Name Lookup.
@@ -174,6 +173,19 @@ class TestSimple(TestCase):
         name = db_with_names.get_as_name(-1)
         self.assertTrue(name is None, "ASN Name Incorrect! Should be None")
 
+    def test_assize(self):
+        """
+            Test AS Size calculation correctness
+        """
+        size = sum([2 ** (32 - int(px.split('/')[1])) for px in []])  # Check empty list of prefixes
+        self.assertEqual(size, 0)
 
+        size = self.asndb.get_as_size(1133)  # Uni Twente AS which has 1 /16 prefixes
+        self.assertEqual(size, 65536)        # Manually Checked.
 
+        size = self.asndb.get_as_size(1128)  # TU-Delft AS which has 3 non overlapping /16 prefixes
+        self.assertEqual(size, 196608)       # Double checked with RIPE stat.
+
+        size = self.asndb.get_as_size(1124)  # UVA AS which has 3 non overlapping prefixes, (2 /16s and 1 /17)
+        self.assertEqual(size, 163840)       # Double checked with RIPE stat.
 

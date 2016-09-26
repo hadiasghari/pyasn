@@ -105,7 +105,7 @@ class pyasn(object):
             # build full dictionary of {asn: set(prefixes)}, and cache it for subsequent calls
             self._as_prefixes = defaultdict(set)
             for px in self.radix.prefixes():
-                ip, mask =  px.split('/')  # fine with IPv4/IPv6
+                ip, mask = px.split('/')  # fine with IPv4/IPv6
                 rn = self.radix.search_exact(ip, masklen=int(mask))
                 # we walk the radix-tree by going through all prefixes. it is very important to use search-exact
                 # in the process, with the correct mask, (to avoid bug #10)
@@ -124,6 +124,18 @@ class pyasn(object):
         non_overlapping_prefixes4 = collapse_addresses([ip_network(i) for i in prefixes if ':' not in i])
         non_overlapping_prefixes6 = collapse_addresses([ip_network(i) for i in prefixes if ':' in i])
         return [i.compressed for i in non_overlapping_prefixes4] + [i.compressed for i in non_overlapping_prefixes6]
+
+    def get_as_size(self, asn):
+        """
+        Returns the size of an AS as the total number of IP addresses that the AS is responsible for.
+        :param asn: The autonomous system number
+        :return: number of unique IP addresses routed by AS
+        """
+        prefixes = self.get_as_prefixes_effective(asn)
+        if not prefixes:
+            return 0
+        size = sum([2 ** (32 - int(px.split('/')[1])) for px in prefixes])
+        return size
 
     def get_as_name(self, asn):
         """
