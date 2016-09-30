@@ -29,28 +29,39 @@ from __future__ import print_function, division
 from datetime import date, datetime
 from time import time
 import ftplib
+import argparse
 import subprocess
 from sys import argv, exit, stdout, version_info
 if version_info[0] < 3:
     from urllib2 import urlopen
 else:
     from urllib.request import urlopen
+# FIXME: Why using urllib AND wget? Can urllib do listing AND downloading?
 
-if not (len(argv) == 2 and (argv[1] == '--latest' or argv[1] == '--latestv6')) and not (len(argv) == 3 and argv[1] == '--dates-from-file'):
-    print('usage: %s [--dates-from-file FILEWITHDATES] | [--latest | --latestv6 ]' % (argv[0]))
-    print('\n       The script downloads MRT dump files from ROUTEVIEWS for the dates specified. It requires wget.')
-    exit()
+# Parse command line options
+parser = argparse.ArgumentParser(description="Script to download MRT format bgpdata from routeviews.")
 
-download_mode = argv[1]
+# mutually exclusive options
+group = parser.add_mutually_exclusive_group()
+group.add_argument('--latestv4', '-4', '--latest', action='store_true', help='Grab lastest v4 data')
+group.add_argument('--latestv6', '-6', action='store_true', help='Grab lastest v6 data')
+group.add_argument('--latestv46', '-46', action='store_true', help='Grab lastest v4 AND v6 data')
+group.add_argument('--dates-from-file', '-f', action='store', help='Grab a specifc dates v4 data')
+args = parser.parse_args()
 
-if download_mode == '--latest' or download_mode == '--latestv6':
+# ftp method for latest tables
+if args.latestv4 or args.latestv6 or args.latestv46:
     # Thanks to Vitaly Khamin (https://github.com/khamin) for suggesting this method
     DOMAIN = 'archive.routeviews.org'
     print('Connecting to ftp://' + DOMAIN)
     ftp = ftplib.FTP(DOMAIN)
     ftp.login()
-    datapath = 'bgpdata'
-    if download_mode == '--latestv6': datapath = 'route-views6/bgpdata'
+
+    # Choose correct path
+    if args.latestv6: datapath = 'route-views6/bgpdata'
+    elif args.latestv46: datapath = 'route-views4/bgpdata'
+    else: datapath = 'bgpdata'
+
     months = sorted(ftp.nlst(datapath), reverse=True)
     print("Finding latest RIB file in /%s/RIBS/ ..." % months[0])
     ftp.cwd('/%s/RIBS/' % months[0])
@@ -60,7 +71,7 @@ if download_mode == '--latest' or download_mode == '--latestv6':
         ftp.cwd('/%s/RIBS/' % months[1])
         fls = ftp.nlst()
         if not fls:
-            print("Cannot find file to download. Please report a bug for the script")
+            print("Cannot find file to download. Please report a bug on github?")
             exit()
     filename = max(fls)
     filesize = ftp.size(filename)
@@ -76,14 +87,16 @@ if download_mode == '--latest' or download_mode == '--latestv6':
         recv.chunk, recv.bytes, recv.start = 0, 0, time()
         ftp.retrbinary('RETR %s' % filename, recv)
     ftp.close()
-    print('\n Download complete.')
+    print('\nDownload complete.')
 
+# read dates from a local file and use wget to download range
+# FIXME: currently v4 specific
 
-if download_mode == '--dates-from-file':
+if args.dates_from_file:
     dates_to_get = []
-    f = open(argv[2])
+    f = open(args.dates_from_file)
     if not f:
-        print("can't open %s" % argv[2])
+        print("can't open %s" % args.dates_from_file)
         exit()
     for s in f:
         if not s.strip() or s[0] == '#':
@@ -120,14 +133,10 @@ if download_mode == '--dates-from-file':
         size = s[:ix]
 
         url_full = url_dir + fname
-        if download_mode == '--latest':
-            print()
-            ret = subprocess.call(['wget',  url_full])  # non-quiet mode
-        else:
-            print('downloading...', end=' ')
-            stdout.flush()
-            ret = subprocess.call(['wget', '-q', url_full])  # quiet mode
-            print()
+        print('downloading...', end=' ')
+        stdout.flush()
+        ret = subprocess.call(['wget', '-q', url_full])  # quiet mode
+        print()
         ret = "" if ret == 0 else "[FAIL:%d]" % ret
 
         print('%s\t%s\t%s\t%s' % (dt, size, url_full, ret))
