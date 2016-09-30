@@ -29,10 +29,15 @@
 from __future__ import print_function, division
 from pyasn import mrtx, __version__
 from bz2 import BZ2File
+from gzip import GzipFile
 from time import time
 from sys import argv, exit, stdout
 from glob import glob
 from datetime import datetime, timedelta
+
+# magic numbers
+GZIP_MAGIC = b'\x1f\x8b'
+BZ2_MAGIC = b'\x42\x5a\x68'
 
 print('MRT RIB log importer %s' % __version__)
 
@@ -47,8 +52,23 @@ if len(argv) not in (4, 5, 6) or argv[1] not in ('--single', '--bulk'):
 
 binary_output = '--binary' in argv[4:]
 
+
+def open_archive(fpath, mode='rb'):
+    """Open a bz2 or gzip archive."""
+
+    with open(fpath, mode) as fh:
+        hdr = fh.read(max(len(BZ2_MAGIC), len(GZIP_MAGIC)))
+
+    if hdr.startswith(BZ2_MAGIC):
+        return BZ2File(fpath, mode)
+    elif hdr.startswith(GZIP_MAGIC):
+        return GzipFile(fpath, mode)
+    else:
+        raise TypeError('Unknown file type')
+
+
 if argv[1] == '--single':
-    f = BZ2File(argv[2], 'rb')
+    f = open_archive(argv[2])
     print_progress = '--no-progress' not in argv[4:]
     dat = mrtx.parse_mrt_file(f, print_progress=print_progress)
     f.close()
@@ -71,7 +91,7 @@ stdout.flush()
 st = time()
 
 while dt <= dt_end:
-    # for each day, process first file named "rib.YYYYMMDD.xxxx.bz2". 
+    # for each day, process first file named "rib.YYYYMMDD.xxxx.bz2".
     # this is default filename used by routeviews and downloaded by pyasn_wget_rib.py
     files = glob('rib.%4d%02d%02d.????.bz2' % (dt.year, dt.month, dt.day))
     if not files:
@@ -80,7 +100,7 @@ while dt <= dt_end:
     if len(files) > 1:
         print("warning: multiple files on %s, only converting first." % dt)
     dump_file = files[0]
-    f = BZ2File(dump_file, 'rb')
+    f = open_archive(dump_file)
     print("%s... " % dump_file[4:-4])
     stdout.flush()
     dat = mrtx.parse_mrt_file(f)
