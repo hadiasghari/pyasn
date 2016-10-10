@@ -82,7 +82,7 @@ Both version 1 & 2 TABLE_DUMPS are supported, as well as 32bit ASNs. IPv6 implem
                 #    print("  DEBUG %s for %s" % (mrt.as_path, mrt.prefix), file=stderr)
                 origin = mrt.as_path.origin_as
                 results[mrt.prefix] = origin
-	    except IndexError:
+            except IndexError:
                 if skip_record_on_error:
                     print("  IndexError parsing prefix '%s' ..Skipping it" % (mrt.prefix), file=stderr)  # to aid debugging
                     continue
