@@ -35,16 +35,21 @@ Other objects:
 """
 
 from __future__ import print_function, division
-from socket import inet_ntoa, inet_aton, inet_ntop, AF_INET, AF_INET6
+from socket import inet_ntoa, inet_aton, AF_INET, AF_INET6
 from struct import unpack, pack
 from time import time, asctime
 from sys import stderr, version_info
 try:
     from collections import OrderedDict
-except:
+except ImportError:
     # python 2.6 support - needs the ordereddict module
     from ordereddict import OrderedDict
 
+try:
+    from socket import inet_ntop
+except ImportError:
+    pass #inet_ntop is only available on unix
+    
 IS_PYTHON2 = (version_info[0] == 2)
 
 
