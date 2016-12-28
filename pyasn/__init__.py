@@ -86,17 +86,27 @@ class pyasn(object):
             ext = os.path.splitext(self._asnames_file)[-1]
             raise Exception('Autonomous system names parser does not support %s format.' % ext)
 
-    def lookup(self, ip_address):
+    def lookup(self, ip_address, masklen=None):
         """
-        Returns the as number and best matching prefix for given ip address.\n
+        Returns the as number and best matching prefix for given ip address or network.\n
+        Examples:
+            lookup('8.8.8.8') -> (15169, '8.8.8.0/24')
+            lookup('8.8.8.0","24") -> (15169, '8.8.8.0/24')
+            lookup('8.8.8.0","25") -> (15169, '8.8.8.0/24')
+            lookup("8.8.8.0","16") -> (3356, '8.0.0.0/9')
+
         :param ip_address: String representation of ip address , for example "8.8.8.8".
+        :param masklen: String representation of masklen allow for CIDR network matching, for example "23"
         :raises: ValueError if an invalid IP address is passed.
         :return: (asn, prefix) of a given IP address.\n
             'asn' is the 32-bit AS Number that holds this IP address, as advertised on BGP.\n
             'prefix' is the best matching prefix in the BGP table for the given IP address.\n
             Returns (None, None) if the IP address is not found (=not advertised, unreachable)
         """
-        rn = self.radix.search_best(ip_address)
+        if masklen:
+            rn = self.radix.search_best(ip_address,masklen)
+        else:
+            rn = self.radix.search_best(ip_address)
         return (rn.asn, rn.prefix) if rn else (None, None)
 
     def get_as_prefixes(self, asn):
