@@ -1,4 +1,4 @@
-# Copyright (c) 2009-2014 Hadi Asghari
+# Copyright (c) 2009-2016 Hadi Asghari
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -55,9 +55,9 @@ IS_PYTHON2 = (version_info[0] == 2)
 
 def parse_mrt_file(mrt_file,
                    print_progress=False,
-                   debug_break_after=None,
-                   skip_record_on_error=False):
-    """parse_file(file, print_progress=False):
+                   skip_record_on_error=False,
+                   debug_break_after=None):
+    """parse_file(file, print_progress=False, skip_record_on_error=False):
 Parses an MRT/RIB dump file.\n
     in: opened dump file to use (file-object)
     out: { "NETWORK/MASK" : ASN | set([Originating ASNs]) }
@@ -69,14 +69,19 @@ Both version 1 & 2 TABLE_DUMPS are supported, as well as 32bit ASNs. IPv6 implem
     results = OrderedDict()
     n, stime = 0, time()
     while True:
+        n += 1
+        if debug_break_after and n > debug_break_after:
+            break
+
         mrt = MrtRecord.next_dump_table_record(mrt_file)
         if not mrt:
             # EOF
             break
-        if not mrt.table:
-            # skip entry
+        if not mrt.detail \
+           or (mrt.type == mrt.TYPE_TABLE_DUMP_V2 and mrt.sub_type == MrtRecord.T2_PEER_INDEX):
+            # not a prefix/as-path entry
             if print_progress:
-                print('parse_mrt_file(): starting  parse for %s' % mrt)
+                print('parse_mrt_file():', mrt, file=stderr)
             continue
 
         # important change from pyasn_converter 1.2"
@@ -90,24 +95,32 @@ Both version 1 & 2 TABLE_DUMPS are supported, as well as 32bit ASNs. IPv6 implem
                 results[mrt.prefix] = origin
             except IndexError:
                 if skip_record_on_error:
-                    print("  IndexError parsing prefix '%s' .. skipping" % mrt.prefix, file=stderr)
+                    print("  WARNING: IndexError parsing prefix '%s', skipping it" % mrt.prefix,
+                          file=stderr)
                     continue
                 else:
                     raise
             except:
-                # Log the error and raise it again
-                print("  Error parsing prefix '%s'" % (mrt.prefix), file=stderr)
-                raise
+                print("  Error parsing prefix '%s', can't continue!" % (mrt.prefix), file=stderr)
+                raise  # raise it again
         else:
-            assert mrt.type == mrt.TYPE_TABLE_DUMP
-            # in TD2, no prefix appears twice. (probably because we use *only entry 0 of records*
-            #         -- is this ok?)
-            # in TD1, they do, but we are interested only in the first match" (in one dump checked,
-            #         all duplicate prefixes had same origin, but we wn't assert for speed)
+            # A repeated prefix!
+            # In TD1, repeated prefixes were normal. We cared only about 'first-match'...
+            # In TD2, until recently (201701), the MRT/RIB files typically didn't repeat prefixes.
+            #   Recently, repetitions have resurfaced (e.g. bug #39). Such prefixes typically map
+            #   to the same AS-origin, but not always (I'm not sure why. e.g, for 20170102,
+            #   out of 600k prefixes, 4 prefixes differ.)
+            # Print warning. We check only for TDV2.
+            #   In TDv1, there were many many reptitions, slowing the conversion down
+            if mrt.type == mrt.TYPE_TABLE_DUMP_V2:
+                current = results[mrt.prefix]
+                new = mrt.as_path.origin_as
+                if current != new:
+                    current = "{%d ASes}" % len(current) if current is set else "%d" % current
+                    new = "{%d ASes}" % len(new) if new is set else "%d" % new
+                    print("  WARNING: repeated prefix '%s' maps to different origin (%s vs %s)"
+                          % (mrt.prefix, current, new), file=stderr)
 
-        n += 1
-        if debug_break_after and n > debug_break_after:
-            break
         if print_progress and n % (100000 if mrt.type == mrt.TYPE_TABLE_DUMP_V2 else 500000) == 0:
             print('  MRT record %d @%.fs' % (n, time() - stime), file=stderr)
     #
@@ -116,6 +129,37 @@ Both version 1 & 2 TABLE_DUMPS are supported, as well as 32bit ASNs. IPv6 implem
     if '::/0' in results:
         del results['::/0']  # similarly for IPv6
     return results
+
+
+def dump_verbose_mrt_file(mrt_file, break_after=None):
+    """
+    Parses and prints an MRT/RIB file contents to screen. For debugging purposes, works on TD2.
+    """
+    n = 1
+    while True:
+        mrt = MrtRecord.next_dump_table_record(mrt_file, optimize_parse=False)
+        if not mrt:
+            break  # EOF
+        if not mrt.type == mrt.TYPE_TABLE_DUMP_V2:
+            raise("This method only works on TDv2 files")
+        assert mrt.detail
+        print('\nRecord #%d' % n, mrt, file=stderr)
+
+        if mrt.sub_type in (MrtRecord.T2_RIB_IPV4, MrtRecord.T2_RIB_IPV6):
+            # Get the AS-path attribute from the entry (code similar to mrt.as_path)
+            for i, entry in enumerate(mrt.detail.entries):
+                attrs = entry.attrs
+                for a in attrs:
+                    if a.bgp_type == BgpAttribute.ATTR_AS_PATH:
+                        # prints the whole as-path. note this might require try-except
+                        path = a.path_detail()
+                        print("\t e%d" % i, path, file=stderr)
+                    else:
+                        # print("\t e%d" % i, "ignoring attribute ", a.bgp_type, file=stderr)
+                        pass
+        n += 1
+        if break_after and n > break_after:
+            break
 
 
 def dump_prefixes_to_text_file(ipasn_data,
@@ -142,7 +186,9 @@ def dump_prefixes_to_text_file(ipasn_data,
 
 
 def dump_prefixes_to_binary_file(ipasn_data, out_bin_file_name, orig_mrt_name, extra_comments=""):
-    # TODO: this function writes binary output. however, the reading of them is not tested :)
+    # TODO: this method will most probaly be deprecated (not tested and no IPv6 support).
+    #       it will be replaced with a GZipped reader, quite possibly.
+
     fw = open(out_bin_file_name, 'wb')
     # write common header
     fw.write(b'PYASN')  # magic header
@@ -209,58 +255,54 @@ class MrtRecord:
     TYPE_TABLE_DUMP_V2 = 13
     T1_AFI_IPv4 = 1
     T1_AFI_IPv6 = 2
-    T2_PEER_INDEX_TABLE = 1
-    T2_RIB_IPV4_UNICAST = 2
-    T2_RIB_IPV6_UNICAST = 4
+    T2_PEER_INDEX = 1
+    T2_RIB_IPV4 = 2
+    T2_RIB_IPV6 = 4
 
     def __init__(self, header):
         self.ts, self.type, self.sub_type, self.data_len = unpack('>IHHI', header)
-        self.table = None
+        self.detail = None
 
     @staticmethod
-    def next_dump_table_record(f):
+    def next_dump_table_record(f, optimize_parse=True):
         header_len = 12
         buf = f.read(header_len)  # read table-header
         if not buf:  # EOF
             return None
-        # assert len(buf) == header_len
         mrt = MrtRecord(buf)
         buf = f.read(mrt.data_len)  # read table-data
         assert len(buf) == mrt.data_len
         if mrt.type == MrtRecord.TYPE_TABLE_DUMP:
             assert mrt.sub_type in (MrtRecord.T1_AFI_IPv4, MrtRecord.T1_AFI_IPv6)
-            mrt.table = MrtTableDump1(buf, mrt.sub_type)
+            mrt.detail = MrtTD1Record(buf, mrt.sub_type, optimize_parse)
         elif mrt.type == MrtRecord.TYPE_TABLE_DUMP_V2:
             # only allow these types
-            # T2_PEER_INDEX_TABLE provides BGP ID of the collector and list of peers; not used here
-            assert mrt.sub_type in (MrtRecord.T2_PEER_INDEX_TABLE,
-                                    MrtRecord.T2_RIB_IPV4_UNICAST,
-                                    MrtRecord.T2_RIB_IPV6_UNICAST)
-            if mrt.sub_type in (MrtRecord.T2_RIB_IPV4_UNICAST, MrtRecord.T2_RIB_IPV6_UNICAST):
-                mrt.table = MrtTableDump2(buf, mrt.sub_type)
+            assert mrt.sub_type in (MrtRecord.T2_PEER_INDEX,
+                                    MrtRecord.T2_RIB_IPV4,
+                                    MrtRecord.T2_RIB_IPV6)
+            mrt.detail = MrtTD2Record(buf, mrt.sub_type, optimize_parse)
         else:
             raise Exception("MrtTableHeader got an unknown MRT table dump TYPE <%d>!" % mrt.type)
         return mrt
 
     def __repr__(self):
-        return 'MrtTable(ts:%d, type:%d, sub-type:%d, data-len:%d, seq:%s, prefix:%s)' \
-               % (self.ts, self.type, self.sub_type, self.data_len, self.table_seq, self.prefix)
+        if self.detail:
+            return repr(self.detail)
+        else:
+            return "MrtRecord(Unknown type:%d/:%d, ts:%d, data-len:%d, prefix:%s)" \
+                   % (self.type, self.ts, self.sub_type, self.data_len, self.prefix)
+        return ret
 
     @property
     def prefix(self):
-        return self.table.s_prefix if self.table else None  # for IPV4, it's a CIDR/MASK string
-
-    @property
-    def table_seq(self):
-        return self.table.seq if self.table else None
+        return self.detail.prefix if self.detail else None  # CIDR/MASK string
 
     @property
     def as_path(self):
         path = None
-        # For TableDumpV2 we only use entry 0 attributes. is this OK? (DumpV1 have single entry)
-        attrs = (self.table.attrs
-                 if self.type == MrtRecord.TYPE_TABLE_DUMP
-                 else self.table.entries[0].attrs)
+        # For TableDumpV2 we only use entry 0's attributes... (TD1 have single entry)
+        attrs = self.detail.attrs if self.type == MrtRecord.TYPE_TABLE_DUMP else \
+            self.detail.entries[0].attrs
         for a in attrs:
             if a.bgp_type == BgpAttribute.ATTR_AS_PATH:
                 assert not path  # only one as-path attribute in each entry
@@ -269,18 +311,18 @@ class MrtRecord:
         return path
 
 
-class MrtTableDump1:
-    """MrtTableDump1: class to hold and parse MRT Table_Dumps records"""
+class MrtTD1Record:
+    """MrtTD1Record: class to hold and parse MRT Table_Dumps records"""
 
-    def __init__(self, buf, sub_type1, optimized_parse=True):
-        assert sub_type1 == MrtRecord.T1_AFI_IPv4  # we do not support IPv6 for MrtTD1
-        self.view, self.seq, prefix, mask, self.status, self.orig_ts, self.peer_ip, self.peer_as, self.attr_len\
-            = unpack('>HHIBBIIHH', buf[:22])
-        self.s_prefix = "%s/%d" % (inet_ntoa(pack('>I', prefix)), mask)
+    def __init__(self, buf, sub_type, optimize_parse=True):
+        assert sub_type == MrtRecord.T1_AFI_IPv4  # we do not support IPv6 for MrtTD1
+        self.view, self.seq, prefix, mask, self.status, self.orig_ts, self.peer_ip, self.peer_as, \
+            self.attr_len = unpack('>HHIBBIIHH', buf[:22])
+        self.prefix = "%s/%d" % (inet_ntoa(pack('>I', prefix)), mask)
         assert self.view == 0  # view is normally 0. intended for when having multiple RIB views
         self._attrs = []
         self._data_buf = buf
-        self._optimize = optimized_parse
+        self._optimize = optimize_parse
 
     @property
     def attrs(self):
@@ -299,52 +341,69 @@ class MrtTableDump1:
         return self._attrs
 
     def __repr__(self):
-        return 'MrtTableDump1(seq:%d, prefix:%s + sole entry [attr-len:%d, peer:%d, orig-ts:%d])' % \
-            (self.seq, self.s_prefix, self.attr_len, self.peer_as, self.orig_ts)
+        ret = "MrtTD1Record(seq:%d, prefix:%s, attr-len:%d, peer-as:%d)" % \
+            (self.seq, self.prefix, self.attr_len, self.peer_as)
+        return ret
 
 
-class MrtTableDump2:
-    """MrtTableDump2: class to hold and parse MRT records form Table_Dumps_V2"""
+class MrtTD2Record:
+    """MrtTD2Record: class to hold and parse MRT records form Table_Dumps_V2"""
     # Main difference between MTD1 and MTD2 is support of 4-byte ASNs, BGP multiprotocol
     # extensions, and that an MRT record can encode multiple table entries for one prefix.
 
-    def __init__(self, buf, sub_type2, optimized_parse=True):
-        assert sub_type2 in (MrtRecord.T2_RIB_IPV4_UNICAST, MrtRecord.T2_RIB_IPV6_UNICAST)
-        self._optimize = optimized_parse
-        self.seq, mask = unpack('>IB', buf[0:5])
-        octets = (mask + 7) // 8
-        if sub_type2 == MrtRecord.T2_RIB_IPV4_UNICAST:
-            assert octets <= 4
-            padding = bytes(4-octets) if not IS_PYTHON2 else '\0'*(4-octets)
-            s_prefix = inet_ntoa(buf[5:5+octets] + padding)  # faster than IPAddress class
-        elif sub_type2 == MrtRecord.T2_RIB_IPV6_UNICAST:
-            assert octets <= 16
-            padding = bytes(16-octets) if not IS_PYTHON2 else '\0'*(16-octets)
-            s_prefix = inet_ntop(AF_INET6, buf[5:5+octets] + padding)
+    def __init__(self, buf, sub_type, optimize_parse=True):
+        self.prefix, self.sub_type, self._optimize = None, sub_type, optimize_parse
 
-        self.s_prefix = s_prefix + "/%d" % mask
-        self.entry_count = unpack('>H', buf[5 + octets:7 + octets])[0]
-        buf = buf[7 + octets:]
-        self.entries = []
-        for i in range(self.entry_count):
-            e = self.T2RibEntry(buf, self._optimize)
-            self.entries.append(e)
-            if self._optimize:
-                break  # mapping and parsing only first entry shaves 50% time
-            buf = buf[len(e):]
-        assert not buf or self._optimize  # assert fully parsed
+        if self.sub_type == MrtRecord.T2_PEER_INDEX:
+            # PEER_INDEX_TABLE provides BGP ID of the collector and list of peers
+            self.collector, vn_len = unpack('>IH', buf[0:6])
+            self.peer_count = unpack('>H', buf[6+vn_len:6+vn_len+2])[0]
+
+        elif self.sub_type in (MrtRecord.T2_RIB_IPV4, MrtRecord.T2_RIB_IPV6):
+            self.seq, mask = unpack('>IB', buf[0:5])
+            octets = (mask + 7) // 8
+            max_octs = 16 if sub_type == MrtRecord.T2_RIB_IPV6 else 4
+            assert octets <= max_octs
+            padding = bytes(max_octs - octets) if not IS_PYTHON2 else '\0'*(max_octs - octets)
+            if sub_type == MrtRecord.T2_RIB_IPV4:
+                s = inet_ntoa(buf[5:5+octets] + padding)  # ntoa() faster than IPAddress class
+            elif sub_type == MrtRecord.T2_RIB_IPV6:
+                s = inet_ntop(AF_INET6, buf[5:5+octets] + padding)
+                # FIXME: in Windows, ntop() doesn't exist?
+            self.prefix = s + "/%d" % mask
+            self.entry_count = unpack('>H', buf[5 + octets:7 + octets])[0]
+            buf = buf[7 + octets:]
+            self.entries = []
+            for i in range(self.entry_count):
+                e = self.T2RibEntry(buf, self._optimize)
+                self.entries.append(e)
+                if self._optimize:
+                    break  # parsing only first entry shaves 50% time
+                buf = buf[len(e):]
+            assert not buf or self._optimize  # assert fully parsed
+
+        else:
+            # Unknown / unsupported sub-type
+            pass
 
     def __repr__(self):
-        return 'MrtTableDump2(seq:%d, prefix:%s, entries:%d+)' % (self.seq,
-                                                                  self.s_prefix,
-                                                                  len(self.entries))
+        if self.sub_type in (MrtRecord.T2_RIB_IPV4, MrtRecord.T2_RIB_IPV6):
+            ipv = "IPV4" if self.sub_type == MrtRecord.T2_RIB_IPV4 else "IPV6"
+            ret = "MrtTD2Record(%s-UNICAST %s, entries:%d+)" % (ipv, self.prefix,
+                                                                len(self.entries))
+        elif self.sub_type == MrtRecord.T2_PEER_INDEX:
+            ret = "MrtTD2Record(PEER-INDEX-TABLE, collector %s, %d peers)" % (self.collector,
+                                                                              self.peer_count)
+        else:
+            ret = "MrtTD2Record(unknown subtype %d)" % self.sub_type
+        return ret
 
     class T2RibEntry:
-        def __init__(self, buf, optimized_parse):
+        def __init__(self, buf, optimize):
             self.peer, self.orig_ts, self.attr_len = unpack('>HIH', buf[:8])
             self._data = buf[8: 8 + self.attr_len]
             self._attrs = []
-            self._optimize = optimized_parse
+            self._optimize = optimize
 
         @property
         def attrs(self):
