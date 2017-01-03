@@ -32,6 +32,7 @@ RIB_TD2_RECORD_FAIL_PARTDUMP = path.join(path.dirname(__file__),
                                          "../data/bview.20140112.1600_3samples.bz2")
 RIB_TD1_FULLDUMP = path.join(path.dirname(__file__), "../data/rib.20080501.0644.bz2")
 RIB_TD2_FULLDUMP = path.join(path.dirname(__file__), "../data/rib.20140513.0600.bz2")
+RIB_TD1_WIDE_FULLDUMP = path.join(path.dirname(__file__), "../data/rib_rvwide.20040701.0000.bz2")
 RIB_TD2_REPEATED_FAIL_FULLDUMP = path.join(path.dirname(__file__), "../data/rib.20170102.1400.bz2")
 RIB6_TD2_FULLDUMP = path.join(path.dirname(__file__), "../data/rib6.20151101.0600.bz2")
 IPASN_TD1_DB = path.join(path.dirname(__file__), "../data/ipasn_20080501_v12.dat")
@@ -221,7 +222,7 @@ class TestMrtx(TestCase):
         """
         self.dotest_converter_full(RIB_TD1_FULLDUMP, IPASN_TD1_DB)
 
-    def dotest_converter_full(self, full_ribdump_path, ipasn_db_path):
+    def dotest_converter_full(self, full_ribdump_path, ipasn_db_path=None):
         # internal method called by both test_converter_full_v1 & test_converter_full_v2
         if not path.isfile(full_ribdump_path):
             print("SKIPPING - full dump doesn't exist.", file=stderr, end='')
@@ -466,7 +467,7 @@ class TestMrtx(TestCase):
             Tests pyasn.mrtx.parse_mrt_file() - converts a full (TD2) RIB file with IPv6;
             discards output
         """
-        self.dotest_converter_full(RIB6_TD2_FULLDUMP, None)
+        self.dotest_converter_full(RIB6_TD2_FULLDUMP)
 
     def test_skip_all_line_on_single_error_with_boolean_false(self):
         """
@@ -486,5 +487,10 @@ class TestMrtx(TestCase):
         """
             Tests pyasn.mrtx.parse_mrt_file() with repeated prefixes causing errros (bug #39)
         """
-        self.dotest_converter_full(RIB_TD2_REPEATED_FAIL_FULLDUMP, None)
-        # for more insights: dump_verbose_mrt_file(BZ2File(ribdump, 'rb'), break_after=5)
+        self.dotest_converter_full(RIB_TD2_REPEATED_FAIL_FULLDUMP)
+
+    def test_parsing_rviews_wide_td1(self):
+        """
+            Tests pyasn.mrtx.parse_mrt_file() with routeviews WIDE archive TD1 (bug #42)
+        """
+        self.dotest_converter_full(RIB_TD1_WIDE_FULLDUMP)

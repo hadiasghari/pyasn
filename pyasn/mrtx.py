@@ -64,7 +64,7 @@ Parses an MRT/RIB dump file.\n
 \n
 The originating ASN is usually one; however, for some prefixes it can be a set.
 \n
-Both version 1 & 2 TABLE_DUMPS are supported, as well as 32bit ASNs. IPv6 implemented for TD2."""
+Both version 1 & 2 TABLE_DUMPS are supported, as well as 32bit ASNs and IPv6."""
     prefixes, t0, n = OrderedDict(), time(), 0
 
     while True:
@@ -310,11 +310,17 @@ class MrtTD1Record:
     """MrtTD1Record: class to hold and parse MRT Table_Dumps records"""
 
     def __init__(self, buf, sub_type, optimize_parse=True):
-        assert sub_type == MrtRecord.T1_AFI_IPv4  # we do not support IPv6 for MrtTD1
-        self.view, self.seq, prefix, mask, self.status, self.orig_ts, self.peer_ip, self.peer_as, \
-            self.attr_len = unpack('>HHIBBIIHH', buf[:22])
-        self.prefix = "%s/%d" % (inet_ntoa(pack('>I', prefix)), mask)
-        assert self.view == 0  # view is normally 0. intended for when having multiple RIB views
+        self.sub_type, self.prefix, self.attr_len = sub_type, None, None
+        assert self.sub_type in (MrtRecord.T1_AFI_IPv4, MrtRecord.T1_AFI_IPv6)
+
+        self.view, self.seq = unpack('>HH', buf[:4])
+        octs = 4 if self.sub_type == MrtRecord.T1_AFI_IPv4 else 16
+        prefix = inet_ntoa(buf[4:4+octs]) if self.sub_type == MrtRecord.T1_AFI_IPv4 \
+            else inet_ntop(AF_INET6, buf[4:4+octs])  # FIXME: ntop() on Windows?
+        mask, dummy, self.orig_ts, self.peer_ip,  self.peer_as, self.attr_len \
+            = unpack('>BBIIHH', buf[4+octs:18+octs])
+        self.prefix = "%s/%d" % (prefix, mask)
+        # assert self.view == 0  # view is normally 0, used when having multiple RIB views
         self._attrs = []
         self._data_buf = buf
         self._optimize = optimize_parse
@@ -336,8 +342,8 @@ class MrtTD1Record:
         return self._attrs
 
     def __repr__(self):
-        ret = "MrtTD1Record (seq:%d, prefix:%s, attr-len:%d, peer-as:%d)" % \
-            (self.seq, self.prefix, self.attr_len, self.peer_as)
+        ret = "MrtTD1Record (sub:%s, prefix:%s, attrs:%dB)" % (self.sub_type, self.prefix,
+                                                               self.attr_len)
         return ret
 
 
@@ -356,16 +362,16 @@ class MrtTD2Record:
 
         elif self.sub_type in (MrtRecord.T2_RIB_IPV4, MrtRecord.T2_RIB_IPV6):
             self.seq, mask = unpack('>IB', buf[0:5])
+
             octets = (mask + 7) // 8
             max_octs = 16 if sub_type == MrtRecord.T2_RIB_IPV6 else 4
-            assert octets <= max_octs
             padding = bytes(max_octs - octets) if not IS_PYTHON2 else '\0'*(max_octs - octets)
             if sub_type == MrtRecord.T2_RIB_IPV4:
                 s = inet_ntoa(buf[5:5+octets] + padding)  # ntoa() faster than IPAddress class
             elif sub_type == MrtRecord.T2_RIB_IPV6:
-                s = inet_ntop(AF_INET6, buf[5:5+octets] + padding)
-                # FIXME: in Windows, ntop() doesn't exist?
+                s = inet_ntop(AF_INET6, buf[5:5+octets] + padding)  # FIXME: ntop() on Windows?
             self.prefix = s + "/%d" % mask
+
             self.entry_count = unpack('>H', buf[5 + octets:7 + octets])[0]
             buf = buf[7 + octets:]
             self.entries = []
