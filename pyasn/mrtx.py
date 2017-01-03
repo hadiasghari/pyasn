@@ -38,7 +38,7 @@ from __future__ import print_function, division
 from socket import inet_ntoa, inet_aton, AF_INET, AF_INET6
 from struct import unpack, pack
 from time import time, asctime
-from sys import stderr, version_info
+from sys import stderr, version_info, stdout
 try:
     from collections import OrderedDict
 except ImportError:
@@ -86,7 +86,7 @@ Both version 1 & 2 TABLE_DUMPS are supported, as well as 32bit ASNs and IPv6."""
 
         if mrt.prefix not in prefixes:
             try:
-                origin = mrt.as_path.get_origin_as()
+                origin = mrt.get_first_origin_as()
                 prefixes[mrt.prefix] = origin
             except IndexError:
                 if skip_record_on_error:
@@ -108,7 +108,7 @@ Both version 1 & 2 TABLE_DUMPS are supported, as well as 32bit ASNs and IPv6."""
             #   In TDv1, there were many many reptitions, bogging the conversion.
             if mrt.type == mrt.TYPE_TABLE_DUMP_V2:
                 was = prefixes[mrt.prefix]
-                new = mrt.as_path.get_origin_as(ignore_exception=True)
+                new = mrt.get_first_origin_as(ignore_exception=True)
                 if was != new and print_progress:
                     was = "{%d ASes}" % len(was) if was is set else str(was)
                     new = "{%d ASes}" % len(new) if new is set else str(new)
@@ -125,19 +125,19 @@ Both version 1 & 2 TABLE_DUMPS are supported, as well as 32bit ASNs and IPv6."""
     return prefixes
 
 
-def dump_screen_mrt_file(mrt_file, limit_from=None, limit_to=None):
+def dump_screen_mrt_file(mrt_file, limit_from=None, limit_to=None, screen=stderr):
     """
     Parses and dumps an MRT/RIB archive to screen. For debugging purposes, works on TD2.
     """
     n = 0
-    print("Dumping MRT/RIB archive to screen:", file=stderr)
+    print("Dumping MRT/RIB archive to screen:", file=screen)
     while True:
         mrt = MrtRecord.next_dump_table_record(mrt_file, optimize_parse=False)
         if not mrt:
             break  # EOF
-        if not mrt.type == mrt.TYPE_TABLE_DUMP_V2:
-            print("ERROR: dump_screen_mrt_file() supports only TableDumpV2 (type %d). Encountered"
-                  " type %d, quitting.\n" % (mrt.TYPE_TABLE_DUMP_V2, mrt.type), file=stderr)
+        if mrt.type not in (mrt.TYPE_TABLE_DUMP, mrt.TYPE_TABLE_DUMP_V2):
+            print("ERROR: dump_screen_mrt_file() supports only TDv1/TDv2 (type 12/13). Encountered"
+                  " type %d, quitting.\n" % (mrt.TYPE_TABLE_DUMP_V2, mrt.type), file=screen)
             break
 
         n += 1
@@ -146,14 +146,22 @@ def dump_screen_mrt_file(mrt_file, limit_from=None, limit_to=None):
         if limit_to and n > limit_to:
             break
 
-        print('\nRecord #%06d:' % n, mrt, file=stderr)
+        print('\nRecord #%06d:' % n, mrt, file=screen)
 
-        if mrt.sub_type in (MrtRecord.T2_RIB_IPV4, MrtRecord.T2_RIB_IPV6):
+        if mrt.type == mrt.TYPE_TABLE_DUMP_V2 \
+          and mrt.sub_type in (MrtRecord.T2_RIB_IPV4, MrtRecord.T2_RIB_IPV6):
             for i, entry in enumerate(mrt.detail.entries):
                 for j, attr in enumerate(entry.attrs):
-                    print("\t", "Entry %02d" % (i+1) if j == 0 else ' '*8, attr, file=stderr)
-            origin = mrt.as_path.get_origin_as(ignore_exception=True)
-            print("\t => pyasn choice: AS", origin, file=stderr)
+                    print("\t", "Entry %02d" % (i+1) if j == 0 else ' '*8, attr, file=screen)
+            origin = mrt.get_first_origin_as(ignore_exception=True)
+            print("\t => pyasn choice: AS", origin, file=screen)
+
+        if mrt.type == mrt.TYPE_TABLE_DUMP:
+            for i, attr in enumerate(mrt.detail.attrs):
+                print("\t\t", attr, file=screen)
+            # not so important, but this should only be shown for first in series of prefixes
+            # origin = mrt.get_first_origin_as(ignore_exception=True)
+            # print("\t => pyasn choice: AS", origin, file=stderr)
 
 
 def dump_prefixes_to_text_file(ipasn_data,
@@ -166,7 +174,7 @@ def dump_prefixes_to_text_file(ipasn_data,
         fw = open(out_text_file_name, 'wt', encoding='ASCII')
     fw.write('; IP-ASN32-DAT file\n; Original file : %s\n' % orig_mrt_name)
     n4, n6 = 0, 0
-    for prefix, origin in ipasn_data.items():
+    for prefix in ipasn_data:
         n6 += 1 if ':' in prefix else 0
         n4 += 0 if ':' in prefix else 1
     assert n4 + n6 == len(ipasn_data)
@@ -203,7 +211,7 @@ def dump_prefixes_to_binary_file(ipasn_data, out_bin_file_name, orig_mrt_name, e
         if isinstance(origin, set):
             origin = list(origin)[0]  # get an AS randomly, or the only AS if one, from the set
         network, mask = prefix.split('/')
-        assert ':' not in network   # TODO-IPv6: need more bytes here
+        assert ':' not in network   # IPv6: need more bytes here
         fw.write(inet_aton(network))
         fw.write(pack('B', int(mask)))
         fw.write(pack('I', origin))
@@ -292,44 +300,50 @@ class MrtRecord:
     def prefix(self):
         return self.detail.prefix if self.detail else None  # CIDR/MASK string
 
-    @property
-    def as_path(self):
-        path = None
+    def get_first_origin_as(self, ignore_exception=False):
         # For TableDumpV2 we only use entry 0's attributes... (TD1 have single entry)
-        attrs = self.detail.attrs if self.type == MrtRecord.TYPE_TABLE_DUMP else \
-            self.detail.entries[0].attrs
-        for a in attrs:
-            if a.bgp_type == BgpAttribute.ATTR_AS_PATH:
-                assert not path  # only one as-path attribute in each entry
-                path = a.path_detail()
-        assert path
-        return path
+        try:
+            path = None
+            attrs = self.detail.attrs if self.type == MrtRecord.TYPE_TABLE_DUMP else \
+                self.detail.entries[0].attrs
+            for a in attrs:
+                if a.bgp_type == BgpAttribute.ATTR_AS_PATH:
+                    assert not path  # only one as-path attribute in each entry
+                    path = a.path_detail()
+            assert path
+            return path.get_origin_as()
+        except:
+            if not ignore_exception:
+                raise
+            else:
+                return "<exception>"
 
 
 class MrtTD1Record:
     """MrtTD1Record: class to hold and parse MRT Table_Dumps records"""
 
     def __init__(self, buf, sub_type, optimize_parse=True):
-        self.sub_type, self.prefix, self.attr_len = sub_type, None, None
-        assert self.sub_type in (MrtRecord.T1_AFI_IPv4, MrtRecord.T1_AFI_IPv6)
-
+        self.sub_type, self.seq, self.prefix, self.attr_len = sub_type, None, None, None
         self.view, self.seq = unpack('>HH', buf[:4])
+        assert self.sub_type in (MrtRecord.T1_AFI_IPv4, MrtRecord.T1_AFI_IPv6)
         octs = 4 if self.sub_type == MrtRecord.T1_AFI_IPv4 else 16
         prefix = inet_ntoa(buf[4:4+octs]) if self.sub_type == MrtRecord.T1_AFI_IPv4 \
             else inet_ntop(AF_INET6, buf[4:4+octs])  # FIXME: ntop() on Windows?
-        mask, dummy, self.orig_ts, self.peer_ip,  self.peer_as, self.attr_len \
-            = unpack('>BBIIHH', buf[4+octs:18+octs])
-        self.prefix = "%s/%d" % (prefix, mask)
+        prefix_len, status, self.orig_ts = unpack('>BBI', buf[4+octs:10+octs])
+        assert status == 1  # status octet is unused in TDv1 and SHOULD be set to 1
         # assert self.view == 0  # view is normally 0, used when having multiple RIB views
+        # we ignore peer-ip - it can be 4 or 16 octets.
+        self.peer_as, self.attr_len = unpack('>HH', buf[10+octs*2:14+octs*2])
+        self.prefix = "%s/%d" % (prefix, prefix_len)
         self._attrs = []
-        self._data_buf = buf
+        self._data_buf = buf[14+octs*2:]
         self._optimize = optimize_parse
 
     @property
     def attrs(self):
         # The BGP Attribute fields contains information for the RIB entry (parsed on demand)
         if not self._attrs:
-            buf = self._data_buf[22:]
+            buf = self._data_buf[:]
             j = self.attr_len
             while j > 0:
                 a = BgpAttribute(buf, is32=False)
@@ -342,8 +356,8 @@ class MrtTD1Record:
         return self._attrs
 
     def __repr__(self):
-        ret = "MrtTD1Record (sub:%s, prefix:%s, attrs:%dB)" % (self.sub_type, self.prefix,
-                                                               self.attr_len)
+        ipv = "IPV4" if self.sub_type == MrtRecord.T1_AFI_IPv4 else "IPV6"
+        ret = "MrtTD1Record (%s %s, attributes %dB)" % (ipv, self.prefix, self.attr_len)
         return ret
 
 
@@ -427,8 +441,7 @@ class MrtTD2Record:
 
         def __repr__(self):
             return 'T2RibEntry (attr_len:%d, peer:%d, orig_ts:%d)' % (self.attr_len,
-                                                                      self.peer,
-                                                                      self.orig_ts)
+                                                                      self.peer, self.orig_ts)
 
 
 class BgpAttribute:
@@ -467,7 +480,7 @@ class BgpAttribute:
         ret = "BGPAttribute({}): ".format((self.ATTR_NAMES[t] if 0 <= t <= 18 else "TYPE-%d" % t))
         if t == self.ATTR_AS_PATH:
             ret += str(self.path_detail())
-        elif len(self.data) <= 4:
+        elif 0 < len(self.data) <= 4:
             l = len(self.data)
             v = unpack('>'+'BHI'[l//2], self.data)[0]
             ret += str(v)
@@ -495,17 +508,9 @@ class BgpAttribute:
         def __repr__(self):
             return "path-%s" % ", ".join(str(path) for path in self.pathsegs)
 
-        def get_origin_as(self, ignore_exception=False):
+        def get_origin_as(self):
             """Returns the originating AS for this prefix - an integer if clear,
             a set of integers not fully unclear"""
-            if not ignore_exception:
-                return self._get_origin_as()
-            try:
-                return self._get_origin_as()
-            except:
-                return "<exception>"
-
-        def _get_origin_as(self):
             # important change from pyasn_converter 1.2"
             #   in 1.2, we had a bug that ignored origins of as_paths ending in as_set,
             #   as well as origins of as_paths with more than three segments,

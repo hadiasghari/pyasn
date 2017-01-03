@@ -90,7 +90,7 @@ if args.single:
 
 if args.dump_screen:
     f = open_archive(args.dump_screen[0])
-    mrtx.dump_screen_mrt_file(f, limit_to=args.limit_to)
+    mrtx.dump_screen_mrt_file(f, limit_to=args.limit_to, screen=stdout)
     f.close()
 
 if args.bulk:

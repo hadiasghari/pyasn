@@ -81,7 +81,6 @@ class TestMrtx(TestCase):
         self.assertEqual(len(aspath.pathsegs), 1)
         self.assertEqual(str(aspath.pathsegs[0]), "sequence[2905, 65023, 16637]")
         self.assertEqual(aspath.get_origin_as(), 16637)
-        self.assertEqual(mrt.as_path, aspath)
 
         # third record -
         mrt = MrtRecord.next_dump_table_record(f)
@@ -103,7 +102,6 @@ class TestMrtx(TestCase):
         self.assertEqual(len(aspath.pathsegs), 1)
         self.assertEqual(str(aspath.pathsegs[0]), "sequence[701, 6453, 15169]")
         self.assertEqual(aspath.get_origin_as(), 15169)
-        self.assertEqual(mrt.as_path, aspath)
 
         assert_results = {'1.0.4.0/24': 56203,
                           '1.0.5.0/24': 56203,
@@ -120,9 +118,9 @@ class TestMrtx(TestCase):
             mrt = MrtRecord.next_dump_table_record(f)
             self.assertTrue(isinstance(mrt.detail, MrtTD2Record))
             self.assertEqual(mrt.detail.seq, seq)
-            self.assertTrue(mrt.as_path is not None)
+            # self.assertTrue(mrt.as_path is not None)
             prefix = mrt.prefix
-            origin = mrt.as_path.get_origin_as()
+            origin = mrt.get_first_origin_as()
             self.assertTrue(origin)  # an integer or set!
             if prefix in assert_results:
                 self.assertEqual(assert_results[prefix],
@@ -158,7 +156,6 @@ class TestMrtx(TestCase):
         self.assertEqual(len(aspath.pathsegs), 1)
         self.assertEqual(str(aspath.pathsegs[0]), "sequence[11686, 3561]")
         self.assertEqual(aspath.get_origin_as(), 3561)
-        self.assertEqual(mrt.as_path, aspath)
 
         # second, then third record -
         mrt = MrtRecord.next_dump_table_record(f)
@@ -182,7 +179,6 @@ class TestMrtx(TestCase):
         self.assertEqual(len(aspath.pathsegs), 1)
         self.assertEqual(str(aspath.pathsegs[0]), "sequence[13237, 3320, 1239, 701, 703, 80]")
         self.assertEqual(aspath.get_origin_as(), 80)
-        self.assertEqual(mrt.as_path, aspath)
 
         assert_results = {
             '3.0.0.0/8': 80,
@@ -199,9 +195,9 @@ class TestMrtx(TestCase):
             mrt = MrtRecord.next_dump_table_record(f)
             self.assertTrue(isinstance(mrt.detail, MrtTD1Record))
             self.assertEqual(mrt.detail.seq, seq)
-            self.assertTrue(mrt.as_path is not None)
+            # self.assertTrue(mrt.as_path is not None)
             prefix = mrt.prefix
-            origin = mrt.as_path.get_origin_as()
+            origin = mrt.get_first_origin_as()
             self.assertTrue(origin)  # an integer or set!
             if prefix in assert_results:
                 self.assertEqual(assert_results[prefix],
@@ -343,7 +339,6 @@ class TestMrtx(TestCase):
         self.assertEqual(str(aspath.pathsegs[0]), "sequence[3257, 1103, 1101]")
         # Note: can't figure out if 1101 or this path sequence is correct
         self.assertEqual(aspath.get_origin_as(), 1101)
-        self.assertEqual(mrt.as_path, aspath)
 
         # third record -
         mrt = MrtRecord.next_dump_table_record(f)
@@ -365,7 +360,6 @@ class TestMrtx(TestCase):
         self.assertEqual(len(aspath.pathsegs), 1)
         self.assertEqual(str(aspath.pathsegs[0]), "sequence[3257, 1103, 112]")
         self.assertEqual(aspath.get_origin_as(), 112)
-        self.assertEqual(mrt.as_path, aspath)
 
         # follow list chosen from the file; randomly did WHOIS lookups on prefixes; correct
         assert_results = {"2001:504:2e::/48": 10578,
@@ -453,9 +447,9 @@ class TestMrtx(TestCase):
             mrt = MrtRecord.next_dump_table_record(f)
             self.assertTrue(isinstance(mrt.detail, MrtTD2Record))
             self.assertEqual(mrt.detail.seq, seq)
-            self.assertTrue(mrt.as_path is not None)
+            # self.assertTrue(mrt.as_path is not None)
             prefix = mrt.prefix
-            origin = mrt.as_path.get_origin_as()
+            origin = mrt.get_first_origin_as()
             self.assertTrue(origin)  # an integer or set!
             if prefix in assert_results:
                 self.assertEqual(assert_results[prefix],
