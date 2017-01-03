@@ -34,83 +34,91 @@ from time import time
 from sys import argv, exit, stdout
 from glob import glob
 from datetime import datetime, timedelta
-
-# magic numbers
-GZIP_MAGIC = b'\x1f\x8b'
-BZ2_MAGIC = b'\x42\x5a\x68'
-
-print('MRT RIB log importer %s' % __version__)
-
-if len(argv) not in (4, 5, 6) or argv[1] not in ('--single', '--bulk'):
-    # todo: rewrite using argparse
-    print('Usage:  pyasn_convert_rib.py  --single  ribdump.bz2  ipasn.dat(.bin) [--binary] [--no-progress]')
-    print('        pyasn_convert_rib.py  --bulk START_DATE  END_DATE [--binary]')
-    print('\n        This script converts MRT/RIB export (downloadable from RouteViews or RIPE RIS) to IPASN-databases')
-    print('          For bulk mode, dates should be in yyyy-mm-dd format, and files saved into current folder.')
-    print('          Use the binary switch to save the output in binary format.')
-    exit()
-
-binary_output = '--binary' in argv[4:]
+from argparse import ArgumentParser
 
 
-def open_archive(fpath, mode='rb'):
+parser = ArgumentParser(description="Script to convert MRT/RIB archives to IPASN databases.",
+                        epilog="MRT/RIB archives can be downloaded using "
+                        "'pyasn_util_download.py', or directly from RouteViews (or RIPE RIS).")
+group = parser.add_mutually_exclusive_group(required=True)
+group.add_argument("--single", nargs=2, metavar=("RIBFILE", "IPASN.DAT"), action="store",
+                   help="convert single file (use bz2 or gz suffix)")
+group.add_argument("--dump-screen", nargs=1, metavar="RIBFILE", action="store",
+                   help="parse and dump archive to screen")
+group.add_argument("--bulk", nargs=2, metavar=("START-DATE", "END-DATE"), action="store",
+                   help="bulk conversion (dates are Y-M-D, files need to be "
+                   "named rib.xxxxxxxx.bz2 and in current directory)")
+group.add_argument("--version", action="store_true")
+parser.add_argument("--no-progress", action="store_true",
+                    help="don't show conversion progress (with --single)")
+parser.add_argument("--limit-to", type=int, metavar="N", action="store",
+                    help="limit to first N records (with --dump-screen)")
+# TODO: add --compress option, as we have removed --binary switch (20170103).
+# FIXME: --no-progress and --limit-to should be tied to --single and --dump-screen
+args = parser.parse_args()
+
+
+def open_archive(fpath):
     """Open a bz2 or gzip archive."""
-
+    mode = "rb"
+    GZIP_MAGIC = b"\x1f\x8b"  # magic numbers
+    BZ2_MAGIC = b"\x42\x5a\x68"
     with open(fpath, mode) as fh:
         hdr = fh.read(max(len(BZ2_MAGIC), len(GZIP_MAGIC)))
-
     if hdr.startswith(BZ2_MAGIC):
         return BZ2File(fpath, mode)
     elif hdr.startswith(GZIP_MAGIC):
         return GzipFile(fpath, mode)
     else:
-        raise TypeError('Unknown file type')
+        raise TypeError("Cannot determine file type '%s'" % fpath)
 
 
-if argv[1] == '--single':
-    f = open_archive(argv[2])
-    print_progress = '--no-progress' not in argv[4:]
-    dat = mrtx.parse_mrt_file(f, print_progress=print_progress)
+if args.version:
+    print("MRT/RIB converter version %s." % __version__)
+
+if args.single:
+    f = open_archive(args.single[0])
+    prefixes = mrtx.parse_mrt_file(f, print_progress=not args.no_progress)  # also skip-on-error=T?
     f.close()
-    if not binary_output:
-        mrtx.dump_prefixes_to_text_file(dat, argv[3], argv[2])
-    else:
-        mrtx.dump_prefixes_to_binary_file(dat, argv[3], argv[2])
-    print('IPASN database saved (%d prefixes)' % len(dat))
-    exit()
+    mrtx.dump_prefixes_to_text_file(prefixes, args.single[1], args.single[0])
+    if not args.no_progress:
+        v4, v6 = 0, 0
+        for prefix in prefixes:
+            v6 += 1 if ':' in prefix else 0
+            v4 += 0 if ':' in prefix else 1
+        print('IPASN database saved (%d IPV4 + %d IPV6 prefixes)' % (v4, v6))
 
-assert argv[1] == '--bulk'
-try:
-    dt = datetime.strptime(argv[2], '%Y-%m-%d').date()
-    dt_end = datetime.strptime(argv[3], '%Y-%m-%d').date()
-except ValueError:
-    print('Malformed date. Try yyyy-mm-dd')
-    exit()
-print('Starting bulk RIB conversion, from %s to %s...' % (dt, dt_end))
-stdout.flush()
-st = time()
+if args.dump_screen:
+    f = open_archive(args.dump_screen[0])
+    mrtx.dump_screen_mrt_file(f, limit_to=args.limit_to)
+    f.close()
 
-while dt <= dt_end:
-    # for each day, process first file named "rib.YYYYMMDD.xxxx.bz2".
-    # this is default filename used by routeviews and downloaded by pyasn_wget_rib.py
-    files = glob('rib.%4d%02d%02d.????.bz2' % (dt.year, dt.month, dt.day))
-    if not files:
-        dt += timedelta(1)
-        continue
-    if len(files) > 1:
-        print("warning: multiple files on %s, only converting first." % dt)
-    dump_file = files[0]
-    f = open_archive(dump_file)
-    print("%s... " % dump_file[4:-4])
+if args.bulk:
+    try:
+        dt = datetime.strptime(args.bulk[0], '%Y-%m-%d').date()  # TODO:
+        dt_end = datetime.strptime(args.bulk[1], '%Y-%m-%d').date()
+    except ValueError:
+        print("ERROR: malformed date, try YYYY-MM-DD")
+        exit()
+    print("Starting bulk RIB conversion, from %s to %s..." % (dt, dt_end))
     stdout.flush()
-    dat = mrtx.parse_mrt_file(f)
-    f.close()
-    if not binary_output:
-        out_file = 'ipasn_%d%02d%02d.dat' % (dt.year, dt.month, dt.day)
+    while dt <= dt_end:
+        # for each day, process first file named "rib.YYYYMMDD.xxxx.bz2". (what about .gz?)
+        # this is default filename used by routeviews and downloaded by pyasn_wget_rib.py
+        files = glob("rib.%4d%02d%02d.????.bz2" % (dt.year, dt.month, dt.day))
+        if not files:
+            dt += timedelta(1)
+            continue
+        if len(files) > 1:
+            print("warning: multiple files on %s, only converting first." % dt)
+        dump_file = files[0]
+        f = open_archive(dump_file)
+        print("%s... " % dump_file[4:-4])
+        stdout.flush()
+        dat = mrtx.parse_mrt_file(f)
+        f.close()
+        out_file = "ipasn_%d%02d%02d.dat" % (dt.year, dt.month, dt.day)
         mrtx.dump_prefixes_to_text_file(dat, out_file, dump_file)
-    else:
-        out_file = 'ipasn_%d%02d%02d.bin' % (dt.year, dt.month, dt.day)
-        mrtx.dump_prefixes_to_binary_file(dat, out_file, dump_file)
-    dt += timedelta(1)
-
-print('Finished!')
+        dt += timedelta(1)
+    #
+    print('Finished!')

@@ -44,11 +44,11 @@ try:
 except ImportError:
     # python 2.6 support - needs the ordereddict module
     from ordereddict import OrderedDict
-
 try:
     from socket import inet_ntop
 except ImportError:
-    pass  # inet_ntop is only available on unix
+    # inet_ntop is only available on unix
+    pass
 
 IS_PYTHON2 = (version_info[0] == 2)
 
@@ -62,12 +62,11 @@ Parses an MRT/RIB dump file.\n
     in: opened dump file to use (file-object)
     out: { "NETWORK/MASK" : ASN | set([Originating ASNs]) }
 \n
-The originating ASN is usually one; however, for some prefixes it can be a few.
+The originating ASN is usually one; however, for some prefixes it can be a set.
 \n
-Both version 1 & 2 TABLE_DUMPS are supported, as well as 32bit ASNs. IPv6 implemented for TD2.
-"""
-    results = OrderedDict()
-    n, stime = 0, time()
+Both version 1 & 2 TABLE_DUMPS are supported, as well as 32bit ASNs. IPv6 implemented for TD2."""
+    prefixes, t0, n = OrderedDict(), time(), 0
+
     while True:
         n += 1
         if debug_break_after and n > debug_break_after:
@@ -77,89 +76,84 @@ Both version 1 & 2 TABLE_DUMPS are supported, as well as 32bit ASNs. IPv6 implem
         if not mrt:
             # EOF
             break
+
         if not mrt.detail \
            or (mrt.type == mrt.TYPE_TABLE_DUMP_V2 and mrt.sub_type == MrtRecord.T2_PEER_INDEX):
             # not a prefix/as-path entry
             if print_progress:
-                print('parse_mrt_file():', mrt, file=stderr)
+                print('Parsing MRT/RIB archive .. ', mrt, file=stderr)
             continue
 
-        # important change from pyasn_converter 1.2"
-        #   in 1.2, we had a bug that ignored origins of as_paths ending in as_set,
-        #   as well as origins of as_paths with more than three segments,
-        #   and these prefixes (129 out of the total 513000 for 2014-05-23) weren't saved
-
-        if mrt.prefix not in results:
+        if mrt.prefix not in prefixes:
             try:
-                origin = mrt.as_path.origin_as
-                results[mrt.prefix] = origin
+                origin = mrt.as_path.get_origin_as()
+                prefixes[mrt.prefix] = origin
             except IndexError:
                 if skip_record_on_error:
-                    print("  WARNING: IndexError parsing prefix '%s', skipping it" % mrt.prefix,
-                          file=stderr)
+                    if print_progress:
+                        print("  WARNING: can't get_origin_as for prefix", mrt.prefix, file=stderr)
                     continue
                 else:
                     raise
             except:
-                print("  Error parsing prefix '%s', can't continue!" % (mrt.prefix), file=stderr)
+                print("  Exception parsing prefix record", mrt.prefix, file=stderr)
                 raise  # raise it again
         else:
-            # A repeated prefix!
+            # Repeated prefix, WARN if different.
             # In TD1, repeated prefixes were normal. We cared only about 'first-match'...
             # In TD2, until recently (201701), the MRT/RIB files typically didn't repeat prefixes.
             #   Recently, repetitions have resurfaced (e.g. bug #39). Such prefixes typically map
-            #   to the same AS-origin, but not always (I'm not sure why. e.g, for 20170102,
-            #   out of 600k prefixes, 4 prefixes differ.)
-            # Print warning. We check only for TDV2.
-            #   In TDv1, there were many many reptitions, slowing the conversion down
+            #   to the same AS-origin, but not always (I'm not sure why)
+            # Note, we check only for TDV2. On 20170102, 4 differ out of 600k prefixes.
+            #   In TDv1, there were many many reptitions, bogging the conversion.
             if mrt.type == mrt.TYPE_TABLE_DUMP_V2:
-                current = results[mrt.prefix]
-                new = mrt.as_path.origin_as
-                if current != new:
-                    current = "{%d ASes}" % len(current) if current is set else "%d" % current
-                    new = "{%d ASes}" % len(new) if new is set else "%d" % new
+                was = prefixes[mrt.prefix]
+                new = mrt.as_path.get_origin_as(ignore_exception=True)
+                if was != new and print_progress:
+                    was = "{%d ASes}" % len(was) if was is set else str(was)
+                    new = "{%d ASes}" % len(new) if new is set else str(new)
                     print("  WARNING: repeated prefix '%s' maps to different origin (%s vs %s)"
-                          % (mrt.prefix, current, new), file=stderr)
-
+                          % (mrt.prefix, was, new), file=stderr)
+        #
         if print_progress and n % (100000 if mrt.type == mrt.TYPE_TABLE_DUMP_V2 else 500000) == 0:
-            print('  MRT record %d @%.fs' % (n, time() - stime), file=stderr)
+            print("  MRT record %d @%.fs" % (n, time() - t0), file=stderr)
     #
-    if '0.0.0.0/0' in results:
-        del results['0.0.0.0/0']  # remove default route - can be parameter
-    if '::/0' in results:
-        del results['::/0']  # similarly for IPv6
-    return results
+    if '0.0.0.0/0' in prefixes:
+        del prefixes['0.0.0.0/0']  # remove default route - can be parameter
+    if '::/0' in prefixes:
+        del prefixes['::/0']  # similarly for IPv6
+    return prefixes
 
 
-def dump_verbose_mrt_file(mrt_file, break_after=None):
+def dump_screen_mrt_file(mrt_file, limit_from=None, limit_to=None):
     """
-    Parses and prints an MRT/RIB file contents to screen. For debugging purposes, works on TD2.
+    Parses and dumps an MRT/RIB archive to screen. For debugging purposes, works on TD2.
     """
-    n = 1
+    n = 0
+    print("Dumping MRT/RIB archive to screen:", file=stderr)
     while True:
         mrt = MrtRecord.next_dump_table_record(mrt_file, optimize_parse=False)
         if not mrt:
             break  # EOF
         if not mrt.type == mrt.TYPE_TABLE_DUMP_V2:
-            raise("This method only works on TDv2 files")
-        assert mrt.detail
-        print('\nRecord #%d' % n, mrt, file=stderr)
+            print("ERROR: dump_screen_mrt_file() supports only TableDumpV2 (type %d). Encountered"
+                  " type %d, quitting.\n" % (mrt.TYPE_TABLE_DUMP_V2, mrt.type), file=stderr)
+            break
+
+        n += 1
+        if limit_from and n < limit_from:
+            continue
+        if limit_to and n > limit_to:
+            break
+
+        print('\nRecord #%06d:' % n, mrt, file=stderr)
 
         if mrt.sub_type in (MrtRecord.T2_RIB_IPV4, MrtRecord.T2_RIB_IPV6):
-            # Get the AS-path attribute from the entry (code similar to mrt.as_path)
             for i, entry in enumerate(mrt.detail.entries):
-                attrs = entry.attrs
-                for a in attrs:
-                    if a.bgp_type == BgpAttribute.ATTR_AS_PATH:
-                        # prints the whole as-path. note this might require try-except
-                        path = a.path_detail()
-                        print("\t e%d" % i, path, file=stderr)
-                    else:
-                        # print("\t e%d" % i, "ignoring attribute ", a.bgp_type, file=stderr)
-                        pass
-        n += 1
-        if break_after and n > break_after:
-            break
+                for j, attr in enumerate(entry.attrs):
+                    print("\t", "Entry %02d" % (i+1) if j == 0 else ' '*8, attr, file=stderr)
+            origin = mrt.as_path.get_origin_as(ignore_exception=True)
+            print("\t => pyasn choice: AS", origin, file=stderr)
 
 
 def dump_prefixes_to_text_file(ipasn_data,
@@ -186,8 +180,9 @@ def dump_prefixes_to_text_file(ipasn_data,
 
 
 def dump_prefixes_to_binary_file(ipasn_data, out_bin_file_name, orig_mrt_name, extra_comments=""):
-    # TODO: this method will most probaly be deprecated (not tested and no IPv6 support).
-    #       it will be replaced with a GZipped reader, quite possibly.
+    # DEPRECATED. Because the format has no IPv6 support, and the loader is not tested.
+    # Will be replaced with 'compress' option for dump_prefixes_to_file, and gzip-loader.
+    print("WARNING: dump_prefixes_to_binary_file() will be removed in the next release")
 
     fw = open(out_bin_file_name, 'wb')
     # write common header
@@ -341,7 +336,7 @@ class MrtTD1Record:
         return self._attrs
 
     def __repr__(self):
-        ret = "MrtTD1Record(seq:%d, prefix:%s, attr-len:%d, peer-as:%d)" % \
+        ret = "MrtTD1Record (seq:%d, prefix:%s, attr-len:%d, peer-as:%d)" % \
             (self.seq, self.prefix, self.attr_len, self.peer_as)
         return ret
 
@@ -389,13 +384,14 @@ class MrtTD2Record:
     def __repr__(self):
         if self.sub_type in (MrtRecord.T2_RIB_IPV4, MrtRecord.T2_RIB_IPV6):
             ipv = "IPV4" if self.sub_type == MrtRecord.T2_RIB_IPV4 else "IPV6"
-            ret = "MrtTD2Record(%s-UNICAST %s, entries:%d+)" % (ipv, self.prefix,
-                                                                len(self.entries))
+            more = "+" if self._optimize else ""
+            ret = "MrtTD2Record (%s-UNICAST %s, %d%s entries)" % (ipv, self.prefix,
+                                                                  len(self.entries), more)
         elif self.sub_type == MrtRecord.T2_PEER_INDEX:
-            ret = "MrtTD2Record(PEER-INDEX-TABLE, collector %s, %d peers)" % (self.collector,
-                                                                              self.peer_count)
+            ret = "MrtTD2Record (PEER-INDEX-TABLE, collector %s, %d peers)" % (self.collector,
+                                                                               self.peer_count)
         else:
-            ret = "MrtTD2Record(unknown subtype %d)" % self.sub_type
+            ret = "MrtTD2Record (Unknown Subtype %d)" % self.sub_type
         return ret
 
     class T2RibEntry:
@@ -424,26 +420,22 @@ class MrtTD2Record:
             return 8 + self.attr_len
 
         def __repr__(self):
-            return 'T2RibEntry(attr_len:%d, peer:%d, orig_ts:%d)' % (self.attr_len,
-                                                                     self.peer,
-                                                                     self.orig_ts)
+            return 'T2RibEntry (attr_len:%d, peer:%d, orig_ts:%d)' % (self.attr_len,
+                                                                      self.peer,
+                                                                      self.orig_ts)
 
 
 class BgpAttribute:
-    # BGP attributes are defined here:  http://tools.ietf.org/html/rfc4271  (Section 5)
-
-    # They are part of BGP UPDATE messages. We are interested in the AS_PATH attribute
-    # Stats on attribute in one TableDumpV2 file:
-    #   1/ORIGIN 24% = generated by the speaker that originates the associated routing information
-    #                  exists, but data is zero
-    #   2/AS_PATH 24% = identifies the AS through which routing info of this message has passed
-    #                   we get the advertised paths and origin/owning AS from here
-    #   3/NEXT_HOP 24% = IP address of router that's next hop to the destinations listed
-    #   4/MULTI_EXIT_DISC 10% = optional attr to discriminate among multiple exit or entry points
-    #   5/ATOMIC_AGGREGATE 1.5% = discretionary attribute
-    #   6/AGGREGATOR 2.5% =  optional transitive attribute,
-    #   7/COMMUNITIES 14% ?  (and talk of LOCAL_PREF?)
+    # BGP attributes are defined here:
+    #   http://tools.ietf.org/html/rfc4271  (Section 5)
+    #   https://www.iana.org/assignments/bgp-parameters/bgp-parameters.xhtml
+    # They are part of BGP UPDATE messages.
+    # We are mainly interested in parsing the AS_PATH attribute.
     ATTR_AS_PATH = 2
+    ATTR_NAMES = ["TYPE-0", "ORIGIN", "AS_PATH", "NEXT_HOP", "MULTI_EXIT_DISC", "LOCAL_PREF",
+                  "ATOMIC_AGGREGATE", "AGGREGATOR", "COMMUNITIES", "ORIGINATOR_ID",
+                  "CLUSTER_LIST", "TYPE-11", "TYPE-12", "TYPE-13", "MP_REACH_NLRI",
+                  "MP_UNREACH_NLRI", "EXTENDED COMMUNITIES", "AS4_PATH", "AS4_AGGREGATOR"]
 
     def _has_ext_len(self):
         ext_len = (self.flags >> 4) & 0x1
@@ -465,9 +457,17 @@ class BgpAttribute:
         return 2 + (2 if self._has_ext_len() else 1) + len(self.data)
 
     def __repr__(self):
-        return 'BGPAttribute(type:%d, flags:%d, data_len:%d)' % (self.bgp_type,
-                                                                 self.flags,
-                                                                 len(self.data))
+        t = self.bgp_type
+        ret = "BGPAttribute({}): ".format((self.ATTR_NAMES[t] if 0 <= t <= 18 else "TYPE-%d" % t))
+        if t == self.ATTR_AS_PATH:
+            ret += str(self.path_detail())
+        elif len(self.data) <= 4:
+            l = len(self.data)
+            v = unpack('>'+'BHI'[l//2], self.data)[0]
+            ret += str(v)
+        else:
+            ret += "%d bytes" % len(self.data)
+        return ret
 
     def path_detail(self):
         assert self.bgp_type == self.ATTR_AS_PATH
@@ -487,12 +487,23 @@ class BgpAttribute:
                 self.pathsegs.append(seg)
 
         def __repr__(self):
-            return "BgpAttrASPath(%s)" % ", ".join(str(path) for path in self.pathsegs)
+            return "path-%s" % ", ".join(str(path) for path in self.pathsegs)
 
-        @property
-        def origin_as(self):
+        def get_origin_as(self, ignore_exception=False):
             """Returns the originating AS for this prefix - an integer if clear,
             a set of integers not fully unclear"""
+            if not ignore_exception:
+                return self._get_origin_as()
+            try:
+                return self._get_origin_as()
+            except:
+                return "<exception>"
+
+        def _get_origin_as(self):
+            # important change from pyasn_converter 1.2"
+            #   in 1.2, we had a bug that ignored origins of as_paths ending in as_set,
+            #   as well as origins of as_paths with more than three segments,
+            #   and these prefixes (129 out of the total 513000 for 2014-05-23) weren't saved
 
             # To identify the originating AS for a prefix, this is how path-segments work:
             #
@@ -529,14 +540,14 @@ class BgpAttribute:
             #   paths. In practice, is not a problem because once an IP packet arrives at the edge
             #   of a group of ASes, the BGP speaker is likely to have more detailed path
             #   information.
-            #
+
             # CONCLUSION:
             #  i- go to the last path segment, among the many.
             #  ii- if it's a sequence, return the last AS;
             #      if it's a set, return all ASes; callee can choose any
             #  updated 2014/11: changes so as not to return as bogus AS the origin
 
-            #  assert: sequence & sets can interleave; but at least one sequence will be a set
+            #  sequence & sets can interleave; but at least one sequence will be a set
             assert self.pathsegs[0].seg_type == self.BgpPathSegment.AS_SEQUENCE
 
             origin = None
