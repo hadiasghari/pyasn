@@ -225,9 +225,7 @@ class TestMrtx(TestCase):
             return
 
         print("starting conversion of", full_ribdump_path.split('/')[-1], file=stderr)
-        f = BZ2File(full_ribdump_path, 'rb')
-        converted = parse_mrt_file(f, print_progress=True)
-        f.close()
+        converted = parse_mrt_file(full_ribdump_path, print_progress=True)
 
         if not ipasn_db_path:
             print("No exceptions in conversion. Nothing more to compare with.", file=stderr)
@@ -468,13 +466,13 @@ class TestMrtx(TestCase):
             Tests pyasn.mrtx.parse_mrt_file() with skip_record_on_error set to default(False);
         """
         with self.assertRaises(IndexError):
-            _ = parse_mrt_file(BZ2File(RIB_TD2_RECORD_FAIL_PARTDUMP))
+            _ = parse_mrt_file(RIB_TD2_RECORD_FAIL_PARTDUMP)
 
     def test_read_all_line_on_single_error_with_boolean_true(self):
         """
             Tests pyasn.mrtx.parse_mrt_file() with skip_record_on_error set to True
         """
-        res = parse_mrt_file(BZ2File(RIB_TD2_RECORD_FAIL_PARTDUMP), skip_record_on_error=True)
+        res = parse_mrt_file(RIB_TD2_RECORD_FAIL_PARTDUMP, skip_record_on_error=True)
         self.assertEqual(len(res), 2)
 
     def test_parsing_repeated_prefixes_tabledump(self):

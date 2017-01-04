@@ -20,16 +20,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-
 # MRT RIB log import  [to convert to a text IP-ASN lookup table]
-# file to use per day should be of these series:
+# file to use per day should be of the RouteViews or RIPE RIS series, e.g.:
 # http://archive.routeviews.org/bgpdata/2009.11/RIBS/rib.20091125.0600.bz2
-
 
 from __future__ import print_function, division
 from pyasn import mrtx, __version__
-from bz2 import BZ2File
-from gzip import GzipFile
 from time import time
 from sys import argv, exit, stdout
 from glob import glob
@@ -37,6 +33,7 @@ from datetime import datetime, timedelta
 from argparse import ArgumentParser
 
 
+# Parse command line options
 parser = ArgumentParser(description="Script to convert MRT/RIB archives to IPASN databases.",
                         epilog="MRT/RIB archives can be downloaded using "
                         "'pyasn_util_download.py', or directly from RouteViews (or RIPE RIS).")
@@ -49,49 +46,34 @@ group.add_argument("--bulk", nargs=2, metavar=("START-DATE", "END-DATE"), action
                    help="bulk conversion (dates are Y-M-D, files need to be "
                    "named rib.xxxxxxxx.bz2 and in current directory)")
 group.add_argument("--version", action="store_true")
+# FIXME: tie --no-progress and --record-xx to --single and --dump-screen
 parser.add_argument("--no-progress", action="store_true",
                     help="don't show conversion progress (with --single)")
-parser.add_argument("--limit-to", type=int, metavar="N", action="store",
-                    help="limit to first N records (with --dump-screen)")
-# TODO: add --compress option, as we have removed --binary switch (20170103).
-# FIXME: --no-progress and --limit-to should be tied to --single and --dump-screen
+parser.add_argument("--record-from", type=int, metavar="N", action="store",
+                    help="start dump from record N (with --dump-screen)")
+parser.add_argument("--record-to", type=int, metavar="N", action="store",
+                    help="end dump at record N (with --dump-screen)")
+# FUTURE: add --compress option, as we have removed --binary switch (20170103).
 args = parser.parse_args()
-
-
-def open_archive(fpath):
-    """Open a bz2 or gzip archive."""
-    mode = "rb"
-    GZIP_MAGIC = b"\x1f\x8b"  # magic numbers
-    BZ2_MAGIC = b"\x42\x5a\x68"
-    with open(fpath, mode) as fh:
-        hdr = fh.read(max(len(BZ2_MAGIC), len(GZIP_MAGIC)))
-    if hdr.startswith(BZ2_MAGIC):
-        return BZ2File(fpath, mode)
-    elif hdr.startswith(GZIP_MAGIC):
-        return GzipFile(fpath, mode)
-    else:
-        raise TypeError("Cannot determine file type '%s'" % fpath)
 
 
 if args.version:
     print("MRT/RIB converter version %s." % __version__)
 
 if args.single:
-    f = open_archive(args.single[0])
-    prefixes = mrtx.parse_mrt_file(f, print_progress=not args.no_progress)  # also skip-on-error=T?
-    f.close()
-    mrtx.dump_prefixes_to_text_file(prefixes, args.single[1], args.single[0])
+    prefixes = mrtx.parse_mrt_file(args.single[0],
+                                   print_progress=not args.no_progress)  # also skip-on-error=T?
+    mrtx.dump_prefixes_to_file(prefixes, args.single[1], args.single[0])
     if not args.no_progress:
-        v4, v6 = 0, 0
-        for prefix in prefixes:
-            v6 += 1 if ':' in prefix else 0
-            v4 += 0 if ':' in prefix else 1
+        v6 = sum(1 for x in prefixes if ':' in x)
+        v4 = len(prefixes) - v6
         print('IPASN database saved (%d IPV4 + %d IPV6 prefixes)' % (v4, v6))
 
 if args.dump_screen:
-    f = open_archive(args.dump_screen[0])
-    mrtx.dump_screen_mrt_file(f, limit_to=args.limit_to, screen=stdout)
-    f.close()
+    mrtx.dump_screen_mrt_file(args.dump_screen[0],
+                              record_to=args.record_to,
+                              record_from=args.record_from,
+                              screen=stdout)
 
 if args.bulk:
     try:
@@ -112,13 +94,11 @@ if args.bulk:
         if len(files) > 1:
             print("warning: multiple files on %s, only converting first." % dt)
         dump_file = files[0]
-        f = open_archive(dump_file)
         print("%s... " % dump_file[4:-4])
         stdout.flush()
-        dat = mrtx.parse_mrt_file(f)
-        f.close()
+        dat = mrtx.parse_mrt_file(dump_file)
         out_file = "ipasn_%d%02d%02d.dat" % (dt.year, dt.month, dt.day)
-        mrtx.dump_prefixes_to_text_file(dat, out_file, dump_file)
+        mrtx.dump_prefixes_to_file(dat, out_file, dump_file)
         dt += timedelta(1)
     #
     print('Finished!')

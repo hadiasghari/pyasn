@@ -39,6 +39,8 @@ from socket import inet_ntoa, inet_aton, AF_INET, AF_INET6
 from struct import unpack, pack
 from time import time, asctime
 from sys import stderr, version_info, stdout
+from bz2 import BZ2File
+from gzip import GzipFile
 try:
     from collections import OrderedDict
 except ImportError:
@@ -53,13 +55,27 @@ except ImportError:
 IS_PYTHON2 = (version_info[0] == 2)
 
 
+def open_archive(fpath):
+    """Open a bz2 or gzip archive."""
+    # Thanks to Chris poliquin for this method (https://github.com/poliquin)
+    mode = "rb"
+    GZIP_MAGIC, BZ2_MAGIC = b"\x1f\x8b", b"\x42\x5a\x68"  # magic numbers
+    with open(fpath, mode) as fh:
+        hdr = fh.read(max(len(BZ2_MAGIC), len(GZIP_MAGIC)))
+    if hdr.startswith(BZ2_MAGIC):
+        return BZ2File(fpath, mode)
+    elif hdr.startswith(GZIP_MAGIC):
+        return GzipFile(fpath, mode)
+    else:
+        raise TypeError("Cannot determine file type '%s'" % fpath)
+
+
 def parse_mrt_file(mrt_file,
                    print_progress=False,
-                   skip_record_on_error=False,
-                   debug_break_after=None):
+                   skip_record_on_error=False):
     """parse_file(file, print_progress=False, skip_record_on_error=False):
-Parses an MRT/RIB dump file.\n
-    in: opened dump file to use (file-object)
+Parses an MRT/RIB BGP table dump file.\n
+    in: file-object or string-path to a MRT/RIB archive (.gz/.bz2)
     out: { "NETWORK/MASK" : ASN | set([Originating ASNs]) }
 \n
 The originating ASN is usually one; however, for some prefixes it can be a set.
@@ -67,11 +83,12 @@ The originating ASN is usually one; however, for some prefixes it can be a set.
 Both version 1 & 2 TABLE_DUMPS are supported, as well as 32bit ASNs and IPv6."""
     prefixes, t0, n = OrderedDict(), time(), 0
 
-    while True:
-        n += 1
-        if debug_break_after and n > debug_break_after:
-            break
+    if type(mrt_file) is str:
+        # callee passed a string-path, open it. file will close when this method ends.
+        # (we could alternatively try mrt_file.tell() to test if it's file-like.)
+        mrt_file = open_archive(mrt_file)
 
+    while True:
         mrt = MrtRecord.next_dump_table_record(mrt_file)
         if not mrt:
             # EOF
@@ -110,11 +127,12 @@ Both version 1 & 2 TABLE_DUMPS are supported, as well as 32bit ASNs and IPv6."""
                 was = prefixes[mrt.prefix]
                 new = mrt.get_first_origin_as(ignore_exception=True)
                 if was != new and print_progress:
-                    was = "{%d ASes}" % len(was) if was is set else str(was)
-                    new = "{%d ASes}" % len(new) if new is set else str(new)
+                    was = "{%d ASes}" % len(was) if type(was) is set else str(was)
+                    new = "{%d ASes}" % len(new) if type(new) is set else str(new)
                     print("  WARNING: repeated prefix '%s' maps to different origin (%s vs %s)"
                           % (mrt.prefix, was, new), file=stderr)
         #
+        n += 1
         if print_progress and n % (100000 if mrt.type == mrt.TYPE_TABLE_DUMP_V2 else 500000) == 0:
             print("  MRT record %d @%.fs" % (n, time() - t0), file=stderr)
     #
@@ -125,12 +143,15 @@ Both version 1 & 2 TABLE_DUMPS are supported, as well as 32bit ASNs and IPv6."""
     return prefixes
 
 
-def dump_screen_mrt_file(mrt_file, limit_from=None, limit_to=None, screen=stderr):
+def dump_screen_mrt_file(mrt_file, record_from=None, record_to=None, screen=stderr):
     """
-    Parses and dumps an MRT/RIB archive to screen. For debugging purposes, works on TD2.
+    Parses and dumps an MRT/RIB archive to screen. For debugging purposes.
     """
-    n = 0
+    if type(mrt_file) is str:
+        mrt_file = open_archive(mrt_file)
     print("Dumping MRT/RIB archive to screen:", file=screen)
+
+    n = 0
     while True:
         mrt = MrtRecord.next_dump_table_record(mrt_file, optimize_parse=False)
         if not mrt:
@@ -141,9 +162,9 @@ def dump_screen_mrt_file(mrt_file, limit_from=None, limit_to=None, screen=stderr
             break
 
         n += 1
-        if limit_from and n < limit_from:
+        if record_from and n < record_from:
             continue
-        if limit_to and n > limit_to:
+        if record_to and n > record_to:
             break
 
         print('\nRecord #%06d:' % n, mrt, file=screen)
@@ -159,32 +180,42 @@ def dump_screen_mrt_file(mrt_file, limit_from=None, limit_to=None, screen=stderr
         if mrt.type == mrt.TYPE_TABLE_DUMP:
             for i, attr in enumerate(mrt.detail.attrs):
                 print("\t\t", attr, file=screen)
-            # not so important, but this should only be shown for first in series of prefixes
+            # FIXIME: pyasn's choice origin should only be shown for first of repeated prefixes
             # origin = mrt.get_first_origin_as(ignore_exception=True)
             # print("\t => pyasn choice: AS", origin, file=stderr)
+
+
+def dump_prefixes_to_file(prefixes,
+                          ipasn_file_name,
+                          source_description="",
+                          compress=False,
+                          debug_write_sets=False
+                          ):
+    assert not compress  # FIXME: implement compress option (after loader can read them)
+    if IS_PYTHON2:
+        fw = open(ipasn_file_name, 'wt')
+    else:
+        fw = open(ipasn_file_name, 'wt', encoding='ASCII')
+    fw.write('; IP-ASN32-DAT file\n; Original source: %s\n' % source_description)
+    n6 = sum(1 for x in prefixes if ':' in x)
+    n4 = len(prefixes) - n6
+    fw.write('; Converted on  : %s\n; Prefixes-v4   : %s\n; Prefixes-v6   : %s\n; \n' %
+             (asctime(), n4, n6))
+    for prefix, origin in prefixes.items():
+        if not debug_write_sets and isinstance(origin, set):
+            origin = list(origin)[0]  # get an AS randomly, or the only AS if one, from the set
+        fw.write('%s\t%s\n' % (prefix, origin))
+    fw.close()
 
 
 def dump_prefixes_to_text_file(ipasn_data,
                                out_text_file_name,
                                orig_mrt_name,
-                               debug_write_sets=False):
-    if IS_PYTHON2:
-        fw = open(out_text_file_name, 'wt')
-    else:
-        fw = open(out_text_file_name, 'wt', encoding='ASCII')
-    fw.write('; IP-ASN32-DAT file\n; Original file : %s\n' % orig_mrt_name)
-    n4, n6 = 0, 0
-    for prefix in ipasn_data:
-        n6 += 1 if ':' in prefix else 0
-        n4 += 0 if ':' in prefix else 1
-    assert n4 + n6 == len(ipasn_data)
-    fw.write('; Converted on  : %s\n; Prefixes-v4   : %s\n; Prefixes-v6   : %s\n; \n' %
-             (asctime(), n4, n6))
-    for prefix, origin in ipasn_data.items():
-        if not debug_write_sets and isinstance(origin, set):
-            origin = list(origin)[0]  # get an AS randomly, or the only AS if one, from the set
-        fw.write('%s\t%s\n' % (prefix, origin))
-    fw.close()
+                               debug_write_sets=False
+                               ):
+    # DEPRECATED. kept for compatibility with scripts, please use dump_prefixes_to_file() instead.
+    dump_prefixes_to_file(ipasn_data, out_text_file_name, orig_mrt_name, compress=False,
+                          debug_write_sets=debug_write_sets)
 
 
 def dump_prefixes_to_binary_file(ipasn_data, out_bin_file_name, orig_mrt_name, extra_comments=""):
