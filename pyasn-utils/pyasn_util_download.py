@@ -107,6 +107,7 @@ def find_latest_in_ftp(server, archive_root, sub_dir, print_progress=True):
 def find_latest_routeviews(archive_ipv):
     # RouteViews archives are as follows:
     # ftp://archive.routeviews.org/datapath/YYYYMM/ribs/XXXX
+    archive_ipv = str(archive_ipv)
     assert archive_ipv in ('4', '6', '46', '64')
     return find_latest_in_ftp(server='archive.routeviews.org',
                               archive_root='bgpdata' if archive_ipv == '4' else
@@ -121,7 +122,7 @@ if args.version:
 
 if args.latestv4 or args.latestv6 or args.latestv46:
     # Download latest RouteViews MRT/RIB archive
-    srvr, rp, fn = find_latest_routeviews('4' if args.latestv4 else '6' if args.latestv6 else '46')
+    srvr, rp, fn = find_latest_routeviews(4 if args.latestv4 else 6 if args.latestv6 else '46')
     ftp_download(srvr, rp, fn, fn)
 
 

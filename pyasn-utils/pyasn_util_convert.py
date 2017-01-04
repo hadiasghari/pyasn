@@ -49,6 +49,8 @@ group.add_argument("--version", action="store_true")
 # FIXME: tie --no-progress and --record-xx to --single and --dump-screen
 parser.add_argument("--no-progress", action="store_true",
                     help="don't show conversion progress (with --single)")
+parser.add_argument("--skip-on-error", action="store_true",
+                    help="skip records which fail conversion, instead of stopping (with --single)")
 parser.add_argument("--record-from", type=int, metavar="N", action="store",
                     help="start dump from record N (with --dump-screen)")
 parser.add_argument("--record-to", type=int, metavar="N", action="store",
@@ -62,7 +64,8 @@ if args.version:
 
 if args.single:
     prefixes = mrtx.parse_mrt_file(args.single[0],
-                                   print_progress=not args.no_progress)  # also skip-on-error=T?
+                                   print_progress=not args.no_progress,
+                                   skip_record_on_error=args.skip_on_error)
     mrtx.dump_prefixes_to_file(prefixes, args.single[1], args.single[0])
     if not args.no_progress:
         v6 = sum(1 for x in prefixes if ':' in x)
