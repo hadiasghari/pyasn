@@ -57,8 +57,9 @@ class pyasn(object):
         self._asnames_file = as_names_file
         if ipasn_file.endswith(".gz"):
             # Support for compressed IPASN files added 2017-01-05
-            with gzip.open(ipasn_file, 'rt') as f:
-                ipasn_str = f.read()
+            f = gzip.open(ipasn_file, 'rt')  # Py2.6 doesn't support 'with' for gzip
+            ipasn_str = f.read()
+            f.close()
             # performance note: ipasn_str = subprocess.check_output(['gunzip', '-c', ip_asn_file])
             # is faster, but less portable, hence our choice. we could do hybrid.
             self._records = self.radix.load_ipasndb("", ipasn_str)

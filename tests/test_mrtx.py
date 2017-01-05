@@ -242,13 +242,14 @@ class TestMrtx(TestCase):
         # tests of comparing with v 1.2 (existing conversion): load it, then compare
         # an alternative option is to run a linux DIFF comppand between TMEP_IPASNDAT & IPASN_DB
         ipasndat_v12 = {}
-        assert ipasn_db_path.endswith(".gz")
-        with gzip.open(ipasn_db_path, "rt") as f:
-            for s in f:
-                if s[0] == '#' or s[0] == '\n' or s[0] == ';':
-                    continue
-                prefix, asn = s[:-1].split()
-                ipasndat_v12[prefix] = int(asn)
+        f = gzip.open(ipasn_db_path, "rt") if ipasn_db_path.endswith(".gz") else \
+            open(ipasn_db_path, "rt")
+        for s in f:
+            if s[0] == '#' or s[0] == '\n' or s[0] == ';':
+                continue
+            prefix, asn = s[:-1].split()
+            ipasndat_v12[prefix] = int(asn)
+        f.close()  # Py2.6 doesn't support 'with' for gzip files
 
         print("Comparing %d new vs %d old conversions" % (len(converted), len(ipasndat_v12)),
               file=stderr)
@@ -468,8 +469,7 @@ class TestMrtx(TestCase):
         """
             Tests pyasn.mrtx.parse_mrt_file() with skip_record_on_error set to default(False);
         """
-        with self.assertRaises(IndexError):
-            _ = parse_mrt_file(RIB_TD2_RECORD_FAIL_PARTDUMP)
+        self.assertRaises(IndexError, parse_mrt_file, RIB_TD2_RECORD_FAIL_PARTDUMP)
 
     def test_read_all_line_on_single_error_with_boolean_true(self):
         """
