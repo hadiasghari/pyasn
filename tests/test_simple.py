@@ -138,9 +138,9 @@ class TestSimple(TestCase):
         asn, prefix = self.asndb.lookup('2001:500:88:200::8')
 
         # the following should raise
-        # assertRaisesRegexp requires Py2.7+ (fails on Py 2.6)
-        self.assertRaisesRegexp(ValueError, "v4", self.asndb.lookup, '8.8.8.800')
-        self.assertRaisesRegexp(ValueError, "v6", self.asndb.lookup, '2001:500g:88:200::8')
+        # note: assertRaisesRegexp doesn't exist on Py 2.6, so we're not checking the exp message
+        self.assertRaises(ValueError, self.asndb.lookup, '8.8.8.800')
+        self.assertRaises(ValueError, self.asndb.lookup, '2001:500g:88:200::8')
 
     def test_ipv6(self):
         """
