@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Copyright (c) 2009-2014 Hadi Asghari
+# Copyright (c) 2009-2017 Hadi Asghari
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -30,6 +30,7 @@ from time import time
 from sys import argv, exit, stdout
 from glob import glob
 from datetime import datetime, timedelta
+from subprocess import call
 from argparse import ArgumentParser
 
 
@@ -46,7 +47,9 @@ group.add_argument("--bulk", nargs=2, metavar=("START-DATE", "END-DATE"), action
                    help="bulk conversion (dates are Y-M-D, files need to be "
                    "named rib.xxxxxxxx.bz2 and in current directory)")
 group.add_argument("--version", action="store_true")
-# FIXME: tie --no-progress and --record-xx to --single and --dump-screen
+# FIXME: tie --no-progress/--compress/--skip and --record-xx to respective options above
+parser.add_argument("--compress", action="store_true",  # in place of --binary (20160105)
+                    help="gzip the IPASN output files (with --single)")
 parser.add_argument("--no-progress", action="store_true",
                     help="don't show conversion progress (with --single)")
 parser.add_argument("--skip-on-error", action="store_true",
@@ -55,12 +58,12 @@ parser.add_argument("--record-from", type=int, metavar="N", action="store",
                     help="start dump from record N (with --dump-screen)")
 parser.add_argument("--record-to", type=int, metavar="N", action="store",
                     help="end dump at record N (with --dump-screen)")
-# FUTURE: add --compress option, as we have removed --binary switch (20170103).
 args = parser.parse_args()
 
 
 if args.version:
     print("MRT/RIB converter version %s." % __version__)
+
 
 if args.single:
     prefixes = mrtx.parse_mrt_file(args.single[0],
@@ -71,12 +74,16 @@ if args.single:
         v6 = sum(1 for x in prefixes if ':' in x)
         v4 = len(prefixes) - v6
         print('IPASN database saved (%d IPV4 + %d IPV6 prefixes)' % (v4, v6))
+    if args.compress:
+        call(['gzip', args.single[1]])
+
 
 if args.dump_screen:
     mrtx.dump_screen_mrt_file(args.dump_screen[0],
                               record_to=args.record_to,
                               record_from=args.record_from,
                               screen=stdout)
+
 
 if args.bulk:
     try:
@@ -102,6 +109,8 @@ if args.bulk:
         dat = mrtx.parse_mrt_file(dump_file)
         out_file = "ipasn_%d%02d%02d.dat" % (dt.year, dt.month, dt.day)
         mrtx.dump_prefixes_to_file(dat, out_file, dump_file)
+        if args.compress:
+            call(['gzip', out_file])
         dt += timedelta(1)
     #
     print('Finished!')
