@@ -9,15 +9,15 @@ pyasn
 
 
 **pyasn** is a Python extension module that enables very fast IP address to Autonomous System Number lookups. 
-Current state and Historical lookups can be done, based on the BGP / MRT file used as input.
+Current state and Historical lookups can be done, based on the MRT/RIB BGP archive used as input.
 
-*pyasn* is different from other ASN lookup tools in that it providers **offline** and **historical** lookups. 
-It provides utility scripts for users to build their own lookup databases based on any BGP/MRT dump file. 
+*pyasn* is different from other ASN lookup tools in that it provides **offline** and **historical** lookups. 
+It provides utility scripts for users to build their own lookup databases based on any MRT/RIB archive. 
 This makes *pyasn* much faster than online dig/whois/json lookups.
 
 The module is written in C and Python, and cross-compiles on Linux and Windows. Underneath, it uses a radix tree 
 data structure for storage of IP addresses. In the current version, it borrows code from *py-radix* to support 
-both IPv4 and IPv6 network prefixes. The current release is a beta. Compared to the previous version, it provides 
+both IPV4 and IPV6 network prefixes. The current release is a beta. Compared to the previous version, it provides 
 support for Python 2 and 3; adds new functionality, performance improvements, and unit-tests. 
 
 *pyasn* is developed and maintained by researchers at the Economics of Cybersecurity research group at Delft 
@@ -46,6 +46,8 @@ Building the C module on Windows, using either pip or from source, requires Micr
 pyasn has been tested using Visual C++ Express 2010, available freely from Microsoft's website, on both the 
 official Python 3.4 release and Miniconda3. Other versions of Python, Visual Studio, and Cygwin could also work 
 with minor modifications.
+
+We plan to release *pyasn* packages to major Linux repositories once it is out of beta.
 
 
 Usage
@@ -82,7 +84,7 @@ like this: ::
     1.0.129.0/24	23969
     ...
 
-IPASN data files can be created by downloading BGP/MRT dumps from Routeviews (or similar sources), 
+IPASN data files can be created by downloading MRT/RIB BGP archives from Routeviews (or similar sources), 
 and parsing them using provided scripts that tail the BGP AS-Path. This can be done simply as follows: ::
 
     pyasn_util_download.py --latest
@@ -97,15 +99,14 @@ We also provide download links to a large number of previously generated IPASN d
 weekly  snapshots of the Routeviews data from 2005-2015, accessible here: 
 http://data.3tu.nl/repository/uuid:d4d23b8e-2077-4592-8b47-cb476ad16e12
 
+**New in v1.6:** To save disk space, you can gzip IPASN data files. The load time will be slighlty longer. 
+
 
 Performance Tip
 ===============
 Initial loading of a IPASN data file is the most heavy operation of the package. For fast lookups using multiple 
 IPASN data files, for instance for historical lookups on multiple dates, we recommend caching of loaded data files 
 for better performance.
-
-Alternatively, you can convert the IPASN data files to binary format and load them using the binary load option to 
-improve load time (in beta testing). You can save files to binary format using the ``--binary`` of the utility script
 
 
 Uninstalling pyasn
@@ -116,7 +117,7 @@ You can remove *pyasn* as follows: ::
 
 If you built and installed the package your self use the recorded log to remove the installed files.
 
-**Removing PyASN version 1.2**: *pyasn* v1.5 and v1.2 can be installed side by side (due to lower-cased package 
+**Removing PyASN version 1.2**: *pyasn* v1.5/1.6 and v1.2 can be installed side by side (due to lower-cased package 
 name). To avoid mistakes, you can uninstall the old **PyASN** by deleting the following files from your Python 
 installation: ::
 
@@ -147,8 +148,11 @@ run with the following command: ::
 
     python setup.py test
 
-This beta release has been tested under python version 2.6, 2.7, 3.3 and 3.4. We appreciate contributions towards 
-testing *pyasn*! Unit Tests are particularly appreciated.
+This beta release has been tested under python version 2.6, 2.7, 3.3, 3.4 and 3.5. We appreciate contributions towards 
+testing *pyasn*!
+
+**New in v1.6:** pyasn_util_convert.py offers a '--dump-screen' option which shows the MRT/RIB archive contents and the
+the chosen origin-AS.
 
 
 License & Acknowledgments
@@ -161,3 +165,8 @@ taken (and modified) from MRTd. These are all subject to their respective licens
 for details.
 
 Thanks to Dr. Chris Lee (of Shadowserver) for proposing the use of radix trees.
+
+Since *pyasn*'s move to GitHub, a handful of developers have contributed features and bug fixes to the project. 
+Many thanks to all of them.
+
+

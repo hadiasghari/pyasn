@@ -17,5 +17,4 @@ DONE -- thanks to all contributers:
 - Added Travis support (-- we can add more tests for better "coverage").
 - Users tested conversion of other MRT/RIB archives, e.g. RIPE RIS.
 - Windows testing: IPASN lookup fully works, but conversion scripts fail for IPV6 (see mrtx.py)
-  (Tested with vs2010 on python3.4/miniconda3, via pip or source)
 - Upload our own asndb files to 3TU Datacenter (-- these need updating but no request yet).
