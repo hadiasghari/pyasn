@@ -1,4 +1,4 @@
-# Copyright (c) 2009-2014 Hadi Asghari
+# Copyright (c) 2014-2017 Hadi Asghari
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -23,15 +23,16 @@ import gzip
 import pickle
 from unittest import TestCase
 import pyasn
-import os
+from os import path
 from struct import pack
 from socket import inet_ntoa
 import logging
 from sys import stderr
 
-IPASN_DB_PATH = os.path.join(os.path.dirname(__file__), "../data/ipasn_20140513.dat")
-STATIC_WHOIS_MAPPING_PATH = os.path.join(os.path.dirname(__file__), "../data/cymru.map")
-STATIC_PYASN_v1_2_MAPPING_PATH = os.path.join(os.path.dirname(__file__), "../data/pyasn_v1.2__ipasn_20140513__sample_10000.pickle.gz")
+IPASN_DB_PATH = path.join(path.dirname(__file__), "../data/ipasn_20140513.dat.gz")
+STATIC_CYMRUWHOIS_PATH = path.join(path.dirname(__file__), "../data/cymru.map")
+STATIC_PYASNv12_PATH = path.join(path.dirname(__file__),
+                                 "../data/pyasn_v1.2__ipasn_20140513__sample_10000.pickle.gz")
 logger = logging.getLogger()
 
 
@@ -40,49 +41,58 @@ class TestCorrectness(TestCase):
 
     def test_against_cymru(self):
         """
-            Tests if the current pyasn returns closely similar ASNs as a static lookups saved from whois lookups.
+            Tests if pyasn returns similar ASNs to static lookups saved from Cymru-whois.
         """
-        with open(STATIC_WHOIS_MAPPING_PATH, "r") as f:
+        with open(STATIC_CYMRUWHOIS_PATH, "r") as f:
             cymru_map = eval(f.read())
-            self.assertTrue(len(cymru_map) > 0, msg="Failed to Load cymru.map! Test resource not found or empty.")
+            self.assertTrue(len(cymru_map) > 0,
+                            msg="Failed to Load cymru.map! Test resource not found or empty.")
             print(file=stderr)
             diff = 0
-            for ip in sorted(cymru_map.keys()):  # For output consistency sort the order in which we check the ips
+            for ip in sorted(cymru_map.keys()):  # For output consistency sort order of IPs
                 a, prefix = self.asndb.lookup(ip)
                 b = cymru_map[ip]
                 if a != b:
                     diff += 1
-                    #print("  %-15s > cymru: %6s, pyasn: %6s" % (ip, b, a), file=stderr)  # todo: print this in file
+                    # print("  %-15s > cymru: %6s, pyasn: %6s" % (ip, b, a), file=stderr)
                 self.assertTrue(diff < 30,  msg="Failed for >%d cases" % diff)
 
-        print("  Cymru & pyasn differ in %d/%d cases; acceptable .. " % (diff, len(cymru_map)), end='', file=stderr)
+        print(" Cymru-whois & pyasn differ in %d/%d cases; acceptable.. " % (diff, len(cymru_map)),
+              end='', file=stderr)
+
+        # Note, if we wish to extend this test, one could programatically accesses
+        # Cymru whois as fullows (- although we have our own function):
+        # https://github.com/csirtfoundry/BulkWhois
+        # https://github.com/trolldbois/python-cymru-services
+        # https://github.com/JustinAzoff/python-cymruwhois
+        # Also:
+        # whois -h whois.cymru.com " -f 216.90.108.31 2005-12-25 13:23:01 GMT"
 
     def test_compatibility(self):
         """
             Tests if pyasn returns the same AS number as the old version of pyasn.
         """
-        f = gzip.open(STATIC_PYASN_v1_2_MAPPING_PATH, "rb")
+        f = gzip.open(STATIC_PYASNv12_PATH, "rb")
         logger.debug("Loading mapping file ...")
         old_mapping = pickle.load(f)
         self.assertTrue(len(old_mapping) > 0,
                         msg="Failed to Load pyasn_v1.2__ipasn_20140513__sample_10000.pickle.gz!"
-                            + " Test resource not found or empty.")
+                            " Test resource not found or empty.")
         logger.debug("Mapping file loaded.")
         same, diff = (0, 0)
 
-        for nip in sorted(old_mapping.keys()):  # For output consistency we sort the order in which we check the ips
+        for nip in sorted(old_mapping.keys()):  # For output consistency sort the order of IPs
             sip = inet_ntoa(pack('>I', nip))
             asn, prefix = self.asndb.lookup(sip)
             old_asn = old_mapping[nip]
             if sip in ('128.189.32.228', '209.159.249.194'):
-                continue  # skip these two, pickle created from a little bit older rib file. or recreate
+                continue  # skip these as pickle created from a bit older rib file.
             if asn != old_asn:
-                logger.debug("AS Lookup inconsistent for %s current_pyasn = %s pyasn-v1.2 = %s" % (sip, asn, old_asn))
+                logger.debug("AS Lookup inconsistent for %s pyasn = %s pyasn-v1.2 = %s" % (
+                             sip, asn, old_asn))
                 diff += 1
             else:
                 same += 1
             self.assertEqual(diff, 0, msg="Too Many failures!")
         logger.info("same: %d, diff: %d" % (same, diff))
         f.close()
-
-# whois -h whois.cymru.com " -f 216.90.108.31 2005-12-25 13:23:01 GMT"

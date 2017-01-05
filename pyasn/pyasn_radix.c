@@ -31,12 +31,12 @@
  */
 
  /*
-   Portions Copyright (c) 2014 Hadi Asghari
+   Portions Copyright (c) 2014-2017 Hadi Asghari
    See LICENSE file
  */
 
 
-#include "Python.h"  
+#include "Python.h"
 #include "structmember.h"
 #include "_radix/radix.h"
 
@@ -72,7 +72,7 @@ PyObject *radix_constructor;
 
 typedef struct {
         PyObject_HEAD
-        u_int32_t asn; 
+        u_int32_t asn;
         radix_node_t *rn;       /* Actual radix node (pointer to parent) */
 } RadixNodeObject;
 
@@ -84,7 +84,7 @@ newRadixNodeObject(radix_node_t *rn)
         RadixNodeObject *self;
 
         /* Sanity check */
-        if (rn == NULL || rn->prefix == NULL || 
+        if (rn == NULL || rn->prefix == NULL ||
             (rn->prefix->family != AF_INET && rn->prefix->family != AF_INET6))
                 return NULL;
 
@@ -93,8 +93,8 @@ newRadixNodeObject(radix_node_t *rn)
                 return NULL;
 
         self->rn = rn;
-        self->asn = 0; 
-        
+        self->asn = 0;
+
         return self;
 }
 
@@ -107,18 +107,18 @@ RadixNode_dealloc(RadixNodeObject *self)
 }
 
 
-static PyObject * 
+static PyObject *
 _get_prefix(radix_node_t *rn) {
-    PyObject *ret;  
-    char addr[INET6_ADDRSTRLEN], buf[128];      
-    if (rn->prefix == NULL) 
-        return NULL;    
-    if (inet_ntop(rn->prefix->family, &rn->prefix->add, addr, sizeof(addr)) == NULL) 
+    PyObject *ret;
+    char addr[INET6_ADDRSTRLEN], buf[128];
+    if (rn->prefix == NULL)
         return NULL;
-    sprintf(buf, "%s/%d", addr, rn->prefix->bitlen);             
+    if (inet_ntop(rn->prefix->family, &rn->prefix->add, addr, sizeof(addr)) == NULL)
+        return NULL;
+    sprintf(buf, "%s/%d", addr, rn->prefix->bitlen);
     ret = PyString_FromString(buf);
     return ret;
-}    
+}
 
 
 static PyObject *
@@ -136,7 +136,7 @@ RadixNode_getasn(RadixNodeObject *self, void *closure)
 
 
 static int
-RadixNode_setasn(RadixNodeObject *self, PyObject *value, void* clsoure) 
+RadixNode_setasn(RadixNodeObject *self, PyObject *value, void* clsoure)
 {
     u_int32_t val;
     if (value == NULL) {
@@ -145,11 +145,11 @@ RadixNode_setasn(RadixNodeObject *self, PyObject *value, void* clsoure)
     }
     if (!PyLong_Check(value)) {
         PyErr_SetString(PyExc_TypeError, "The ASN attribute value must be an integer");
-        return -1;    
-    }    
-    val = (u_int32_t) PyLong_AsUnsignedLong(value);   
+        return -1;
+    }
+    val = (u_int32_t) PyLong_AsUnsignedLong(value);
     self->asn = val;
-    return 0;    
+    return 0;
 }
 
 
@@ -161,7 +161,7 @@ static PyGetSetDef RadixNode_getseters[] = {
 
 
 
-PyDoc_STRVAR(RadixNode_doc, 
+PyDoc_STRVAR(RadixNode_doc,
 "Node in a radix tree");
 
 static PyTypeObject RadixNode_Type = {
@@ -195,7 +195,7 @@ static PyTypeObject RadixNode_Type = {
         0,                      /*tp_weaklistoffset*/
         0,                      /*tp_iter*/
         0,                      /*tp_iternext*/
-        0,                      /*tp_methods*/  
+        0,                      /*tp_methods*/
         0,                      /*tp_members*/
         RadixNode_getseters,    /*tp_getset*/
         0,                      /*tp_base*/
@@ -287,12 +287,12 @@ static prefix_t
         if (addr == NULL && packed == NULL) {
                 PyErr_SetString(PyExc_TypeError, "No address specified");
                 return NULL;
-        }        
+        }
         if (addr != NULL) {             /* Parse a string address */
                 if ((prefix = prefix_pton(addr, prefixlen, &errmsg)) == NULL) {
 					PyErr_SetString(PyExc_ValueError, errmsg ? errmsg : "Invalid address format");
                 }
-        } else if (packed != NULL) {    /* "parse" a packed binary address */			
+        } else if (packed != NULL) {    /* "parse" a packed binary address */
                 if ((prefix = prefix_from_blob((u_char*)packed, packlen, prefixlen)) == NULL) {
                         PyErr_SetString(PyExc_ValueError, "Invalid packed address format");
                 }
@@ -320,7 +320,7 @@ create_add_node(RadixObject *self, prefix_t *prefix)
 
         /*
          * Create a RadixNode object in the data area of the node
-         * We duplicate most of the node's identity, because the radix.c:node 
+         * We duplicate most of the node's identity, because the radix.c:node
          * itself has a lifetime independent of the Python node object
          * Confusing? yeah...
          */
@@ -488,7 +488,7 @@ Radix_search_best(RadixObject *self, PyObject *args, PyObject *kw_args)
         if ((prefix = args_to_prefix(addr, packed, packlen, prefixlen)) == NULL)
                 return NULL;
 
-        if ((node = radix_search_best(PICKRT(prefix, self), prefix)) == NULL || 
+        if ((node = radix_search_best(PICKRT(prefix, self), prefix)) == NULL ||
             node->data == NULL) {
                 Deref_Prefix(prefix);
                 Py_INCREF(Py_None);
@@ -552,16 +552,16 @@ Radix_prefixes(RadixObject *self, PyObject *args)
 
         RADIX_WALK(self->rt4->head, node) {
                 if (node->data != NULL) {
-                        prefix = _get_prefix(node); // if NULL?  
-                        PyList_Append(ret, prefix);  
+                        prefix = _get_prefix(node); // if NULL?
+                        PyList_Append(ret, prefix);
                         Py_XDECREF(prefix); // PyList_Append doesn't "steal" the ref; so we need to release ours
                 }
         } RADIX_WALK_END;
         RADIX_WALK(self->rt6->head, node) {
                 if (node->data != NULL) {
-                        prefix = _get_prefix(node);              
+                        prefix = _get_prefix(node);
                         PyList_Append(ret, prefix);
-                        Py_XDECREF(prefix);                        
+                        Py_XDECREF(prefix);
                 }
         } RADIX_WALK_END;
 
@@ -573,142 +573,152 @@ Radix_prefixes(RadixObject *self, PyObject *args)
 // ADDED BY HADI
 
 
-
 prefix_t *
-convert_to_prefix_v4(void *addr, int bitlen) 
+convert_to_prefix_v4(void *addr, int bitlen)
 {
     prefix_t *prefix = NULL;
     if ((prefix = PyMem_Malloc(sizeof(*prefix))) == NULL)
-        return NULL;           
+        return NULL;
     memset(prefix, '\0', sizeof(*prefix));
-    memcpy(&prefix->add.sin, addr, 4);      
-    prefix->bitlen = bitlen;  
+    memcpy(&prefix->add.sin, addr, 4);
+    prefix->bitlen = bitlen;
     prefix->family = AF_INET;
     prefix->ref_count = 1;
     return prefix;
 }
 
+static int
+add_pyobject_to_radix_tree(RadixObject *self, u_int32_t asn, u_int8_t prefixlen, const char *net_addr)
+{
+    // new method, 2017-01-05, refactoring Radix_load_ipasndb()
+    const char *err_msg_i = "";
+    PyObject *node_obj = NULL;
+    prefix_t *prefix = NULL;
+
+    if (asn == 0 || prefixlen == 0)
+        return 0;
+
+    if ((prefix = prefix_pton(net_addr, prefixlen, &err_msg_i)) == NULL)  // works with IPv4 and IPv6 addresses
+        return 0;
+
+    if ((node_obj = create_add_node(self, prefix)) == NULL)
+        return 0;
+
+    ((RadixNodeObject *)node_obj)->asn = asn;
+
+    Py_DECREF(node_obj);
+    Deref_Prefix(prefix);
+    return 1;
+}
+
 
 PyDoc_STRVAR(Radix_load_ipasndb_doc,
-"Radix.load_ipasndb(filename, binary=False) -> number_records\n\
+"Radix.load_ipasndb(from_file, from_string) -> number_records\n\
 \n\
-Loads an IP-ASN-database from file into the RADIX tree.\n\
-It can read from a text file (with fields: prefix/mask asn)\n\
-or same data in a binary format for faster initialization.\n\
+Loads an IP-ASN-database into the RADIX tree.\n\
+It can read it from a text file (with fields: prefix/mask asn),\n\
+or from a string with the same fileds.\n\
 \n\
 Notes:\n\
-- There are helper scripts to make both text & binary from Routeviews BGP data\n\
-- The tree must be empty before calling this function.)\n\
+- There are helper scripts to make the IPASN databases\n\
+- The tree must be empty before calling this function.\n\
 - The text file supports both IPv4 & IPv6.");
 
 
 static PyObject *
-Radix_load_ipasndb(RadixObject *self, PyObject *args, PyObject *kw_args) 
+Radix_load_ipasndb(RadixObject *self, PyObject *args, PyObject *kw_args)
 {
-    static char *keywords[] = { "filename", "binary", NULL };
-	const char *filename = NULL;
-	FILE* ccfd = NULL;
-	size_t n = 0;	 
-    int binary = 0;
-    u_int32_t asn;
-    u_int8_t prefixlen;                 
-    PyObject *node_obj = NULL;		
-    prefix_t *prefix = NULL;   
+    static char *keywords[] = { "from_file", "from_string", NULL };
+    const char *from_file = NULL, *from_string = NULL;
+    char use_file, use_string;
+  	FILE* ccfd = NULL;
+  	size_t record = 0;
     char err_msg[512];
-    const char *err_msg_i = "";	
 
-	if (!PyArg_ParseTupleAndKeywords(args, kw_args, "s|b:load_ipasn",  keywords, &filename, &binary))  
-		return NULL;	
-	
-    if (self->rt4->head != NULL || self->rt6->head != NULL) {
-        PyErr_SetString(PyExc_RuntimeError, "load_ipasndb() called on non-empty radix-tree");  
-        return NULL;    
+    if (!PyArg_ParseTupleAndKeywords(args, kw_args, "s|s:load_ipasn",  keywords, &from_file, &from_string))
+      return NULL;  // FIXME: we want to accept 'None' for either parameter too
+
+    use_file = (from_file != NULL && *from_file);
+    use_string = (from_string != NULL && *from_string);
+
+    if ((use_file && use_string) || (!use_file && !use_string)) {
+          PyErr_SetString(PyExc_RuntimeError, "load_ipasndb() needs one of from_file/from_string.");
+          return NULL;
     }
 
-    if ((ccfd = fopen(filename, (binary ? "rb" : "rt") )) == NULL) {
-        PyErr_SetString(PyExc_IOError, "Could not open the file."); 
-        return NULL; 	
-    }       
-	
-    if (binary) {
-        // TODO-IPv6: the binary-ipasndb-load only supports IPv4 addresses. trivial to fix if needed.
-        size_t elem, i, n_prefixes;
-        char buf[1024], addr[16], tmp[4];           
-        // read binary header. minimum 12 bytes. check for magic number, version (1), n_records, and skip the comment.
-        if (fread(buf, 12, 1, ccfd) < 12)
-            goto parse_or_memory_error;
-        if (strncmp("PYASN", buf, 5) || buf[5]!=1)
-            goto parse_or_memory_error;
-        n_prefixes = *((u_int32_t *)(buf + 6));                    
-        // TODO: add check magic number in binary file, to make sure it's a valid IPASN database
-        
-        while ((elem = fread(buf, 9, 100, ccfd)) > 0) {
-            for (i = 0; i < elem; i++) {
-                memcpy(addr, (buf + i*9), 4); 
-                // fixed - reversing not be needed: tmp[0] = addr[3]; tmp[1] = addr[2]; tmp[2] = addr[1]; tmp[3] = addr[0];  
-                prefixlen = buf[4 + i*9];
-                asn = *((u_int32_t *)(buf + 5 + i*9));                    
-                if (++n > n_prefixes) { 
-                    // the end includes one zero element
-                    if (prefixlen != 0 || asn != 0)
-                        goto parse_or_memory_error;
-                    break;
-                }
-                
-                if ((prefix = convert_to_prefix_v4(tmp, prefixlen)) == NULL)  
-                      goto parse_or_memory_error;
-                
-                if ((node_obj = create_add_node(self, prefix)) == NULL) 
-                      goto parse_or_memory_error;
-                      
-                ((RadixNodeObject *)node_obj)->asn = asn; 
-                
-                Py_DECREF(node_obj); 
-                Deref_Prefix(prefix);
-            }
-            if (n > n_prefixes) 
-                break;
+    if (self->rt4->head != NULL || self->rt6->head != NULL) {
+          PyErr_SetString(PyExc_RuntimeError, "load_ipasndb() called on non-empty radix-tree");
+          return NULL;
+    }
+
+    if (use_file)
+    {
+        // Construct radix-tree from file
+        if ((ccfd = fopen(from_file, "rt" )) == NULL) {
+            PyErr_SetString(PyExc_IOError, "Could not open the file.");
+            return NULL;
         }
-	}
-    else {
-        char buf[512], *p1, *p2;            
+
+        char buf[512], *p1, *p2;
         while (fgets(buf, 512, ccfd) != NULL)  {
-            if (buf[0] == ';' || buf[0] == '#' || buf[0] == '\n')
-                continue;  // skip comments and empty lines         
-                
+
+            if (buf[0] == ';' || buf[0] == '#' || buf[0] == '\n' || buf[0] == 0)
+                continue;  // skip comments and empty lines
+
             if ( (p1=strchr(buf, '\t')) == NULL || (p2 = strchr(buf, '/')) == NULL || p2>p1 )
-                goto parse_or_memory_error;     
+                goto parse_or_memory_error;
 
             *p1++ = *p2++ = 0;  // now: p1 is ASN; p2 is PrefixLen; buf is network address
-            asn = (u_int32_t) atol(p1);  
-            prefixlen = atoi(p2);                          
-            
-            if (asn == 0 || prefixlen == 0)
-                goto parse_or_memory_error;                      
-                        
-            if ((prefix = prefix_pton(buf, prefixlen, &err_msg_i)) == NULL)  // works with IPv4 and IPv6 addresses
-                goto parse_or_memory_error;                 
-            //assert(prefix->family == AF_INET || prefix->family == AF_INET6);
-            
-            if ((node_obj = create_add_node(self, prefix)) == NULL) 
-                goto parse_or_memory_error;               
-            
-            ((RadixNodeObject *)node_obj)->asn = asn; 
-            
-            Py_DECREF(node_obj); 
-            Deref_Prefix(prefix);
-            n++;
-        }
-    }    
-    fclose(ccfd);
-    return PyInt_FromLong(n);
 
-parse_or_memory_error:           
-    sprintf(err_msg, "Error while parsing/adding IPASN database (mode: %s, record: %d)!", (binary ? "binary" : "text"), (int)(n+1));
-    PyErr_SetString(PyExc_RuntimeError, err_msg);  
-    // could add err_msg_i, if set. also perhaps, clear or reset tree before returning from error
-    fclose(ccfd);
-    return NULL;    
+            if (!add_pyobject_to_radix_tree(self, atol(p1), atoi(p2), buf))
+                goto parse_or_memory_error;
+
+            record++;
+        }
+
+        fclose(ccfd);
+  }
+  else {
+        // Construct radix tree from string
+        const char *head = from_string;
+        char buf[512], *p1, *p2;
+
+        while (*head)  {
+            int k = 0;
+
+            while (*head && *head != '\n') {
+              buf[k++] = *head++;
+              if (k > 500)
+                goto parse_or_memory_error; // line is too big
+            }
+            if (*head=='\n')
+              head++;
+            buf[k] = 0;
+
+            if (buf[0] == ';' || buf[0] == '#' || buf[0] == '\n' || buf[0]==0)
+                continue;  // skip comments and empty lines
+
+            if ( (p1=strchr(buf, '\t')) == NULL || (p2 = strchr(buf, '/')) == NULL || p2>p1 )
+                goto parse_or_memory_error;
+
+            *p1++ = *p2++ = 0;  // now: p1 is ASN; p2 is PrefixLen; buf is network address
+
+            if (!add_pyobject_to_radix_tree(self, atol(p1), atoi(p2), buf))
+                goto parse_or_memory_error;
+
+            record++;
+        }
+    }
+
+    return PyInt_FromLong(record);
+
+parse_or_memory_error:
+
+    sprintf(err_msg, "Error while parsing/adding IPASN database (record: %d)!", (int)(record+1));
+    PyErr_SetString(PyExc_RuntimeError, err_msg);
+    if (ccfd)
+      fclose(ccfd);
+    return NULL;
 }
 
 /* ------------------------------------------------------------------------ */
@@ -866,7 +876,7 @@ RadixIter_iternext(RadixIterObject *self)
         return (ret);
 }
 
-PyDoc_STRVAR(RadixIter_doc, 
+PyDoc_STRVAR(RadixIter_doc,
 "Radix tree iterator");
 
 static PyTypeObject RadixIter_Type = {

@@ -1,4 +1,4 @@
-# Copyright (c) 2009-2016 Hadi Asghari
+# Copyright (c) 2009-2017 Hadi Asghari
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -188,10 +188,8 @@ def dump_screen_mrt_file(mrt_file, record_from=None, record_to=None, screen=stde
 def dump_prefixes_to_file(prefixes,
                           ipasn_file_name,
                           source_description="",
-                          compress=False,
                           debug_write_sets=False
                           ):
-    assert not compress  # FIXME: implement compress option (after loader can read them)
     if IS_PYTHON2:
         fw = open(ipasn_file_name, 'wt')
     else:
@@ -213,45 +211,13 @@ def dump_prefixes_to_text_file(ipasn_data,
                                orig_mrt_name,
                                debug_write_sets=False
                                ):
-    # DEPRECATED. kept for compatibility with scripts, please use dump_prefixes_to_file() instead.
-    dump_prefixes_to_file(ipasn_data, out_text_file_name, orig_mrt_name, compress=False,
-                          debug_write_sets=debug_write_sets)
+    # NAME changed, this is for compatibility with scripts, use dump_prefixes_to_file() instead.
+    dump_prefixes_to_file(ipasn_data, out_text_file_name, orig_mrt_name, debug_write_sets)
 
 
-def dump_prefixes_to_binary_file(ipasn_data, out_bin_file_name, orig_mrt_name, extra_comments=""):
-    # DEPRECATED. Because the format has no IPv6 support, and the loader is not tested.
-    # Will be replaced with 'compress' option for dump_prefixes_to_file, and gzip-loader.
-    print("WARNING: dump_prefixes_to_binary_file() will be removed in the next release")
-
-    fw = open(out_bin_file_name, 'wb')
-    # write common header
-    fw.write(b'PYASN')  # magic header
-    fw.write(b'\x01')  # binary format version 1 - IPv4
-    fw.write(pack('I', 0))  # number of records; will need to be updated at the end.
-
-    # let's store comments and the name of the input file in binary; aids debugging. max 500 bytes
-    comments = "Created <%s>, from: %s. %s" % (asctime(), orig_mrt_name, extra_comments)
-    if not IS_PYTHON2:
-        comments = comments.encode('ASCII', errors='replace')  # convert to bytes
-    comments = comments[:499] + b'\0'  # trim, terminate
-    fw.write(pack('h', len(comments)))
-    fw.write(comments)
-
-    n = 0
-    for prefix, origin in ipasn_data.items():
-        if isinstance(origin, set):
-            origin = list(origin)[0]  # get an AS randomly, or the only AS if one, from the set
-        network, mask = prefix.split('/')
-        assert ':' not in network   # IPv6: need more bytes here
-        fw.write(inet_aton(network))
-        fw.write(pack('B', int(mask)))
-        fw.write(pack('I', origin))
-        n += 1
-
-    fw.write(b'\0'*9)  # write one terminating zero record
-    fw.seek(6)
-    fw.write(pack('I', n))  # update number of records at start of file.
-    fw.close()
+# dump_prefixes_to_binary_file():
+# DEPRECATED because our binary format lacked IPv6 support, and its loader wasn't fully tested.
+# In place, pyasn_util_convert has '--compress' now, and pyasn can load gzipped IPASN files.
 
 
 def is_asn_bogus(asn):
@@ -482,10 +448,10 @@ class BgpAttribute:
     # They are part of BGP UPDATE messages.
     # We are mainly interested in parsing the AS_PATH attribute.
     ATTR_AS_PATH = 2
-    ATTR_NAMES = ["TYPE-0", "ORIGIN", "AS_PATH", "NEXT_HOP", "MULTI_EXIT_DISC", "LOCAL_PREF",
+    ATTR_NAMES = ("TYPE-0", "ORIGIN", "AS_PATH", "NEXT_HOP", "MULTI_EXIT_DISC", "LOCAL_PREF",
                   "ATOMIC_AGGREGATE", "AGGREGATOR", "COMMUNITIES", "ORIGINATOR_ID",
                   "CLUSTER_LIST", "TYPE-11", "TYPE-12", "TYPE-13", "MP_REACH_NLRI",
-                  "MP_UNREACH_NLRI", "EXTENDED COMMUNITIES", "AS4_PATH", "AS4_AGGREGATOR"]
+                  "MP_UNREACH_NLRI", "EXTENDED COMMUNITIES", "AS4_PATH", "AS4_AGGREGATOR")
 
     def _has_ext_len(self):
         ext_len = (self.flags >> 4) & 0x1

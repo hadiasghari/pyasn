@@ -1,4 +1,4 @@
-# Copyright (c) 2014 Hadi Asghari
+# Copyright (c) 2014-2017 Hadi Asghari
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -17,15 +17,16 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-import os
-import sys
+from __future__ import print_function, division
+from .pyasn_radix import Radix
+from ._version import __version__
+from os import path
 import codecs
 from ipaddress import collapse_addresses, ip_network
 from collections import defaultdict
-from .pyasn_radix import Radix
+import gzip
+from sys import version_info
 import re
-from ._version import __version__
-
 try:
     import ujson as json
 except ImportError:
@@ -34,46 +35,46 @@ except ImportError:
 
 class pyasn(object):
     """
-    A class that does fast offline historical Autonomous System Number lookups for IPv4/IPv6 addresses.
+    Class to do fast offline & historical Autonomous-System-Number lookups for IPv4/IPv6 addresses.
     """
 
-    def __init__(self, ip_asn_db_file, as_names_file=None, binary=False):
+    def __init__(self, ipasn_file, as_names_file=None):
         """
         Creates a new instance of pyasn.\n
-        :param ip_asn_db_file:
-            Filename of the IP-ASN-database to load
-            The database can be a simple text file with lines of "NETWORK/BITS\tASN"
-            You can create database files from BGP-MRT-dumps using the mrtx and pyasn-utils scripts
-            provided alongside the pyasn package. Alternatively you cna download prebuilt database
-            from the pyasn homepage.
+        :param ipasn_file:
+            Filename of the IP-ASN database to load
+            (The database can be a simple text file with lines of "NETWORK/BITS\tASN".
+             You can create database files from BGP MRT/RBI dumps using the pyasn-utils
+             scripts provided alongside the pyasn package. Alternatively, you can download
+             prebuilt database from the pyasn homepage.)
         :param as_names_file:
-            if given, loads autonomous system names from this file (under construction, do not use)
-        :param binary:
-            set to True if ip_to_asn_file is in binary format, faster but only IPv4 support (under construction, do not use)
+            if given, loads autonomous system names from this file (warning: not fully tested)
         """
-        if binary:
-            raise Exception("Not Implemented")
         self.radix = Radix()
-        # we uses functionality provided by the underlying RADIX class (implemented in C for speed);
-        # actions such as add and delete nodes can be run on the radix tree if required - that's why its exposed
-        self._ipasndb_file = ip_asn_db_file
+        # we use functionality provided by the underlying RADIX class (implemented in C for speed)
+        # actions such as add/delete node can be run on the radix tree if needed -- why its exposed
+        self._ipasndb_file = ipasn_file
         self._asnames_file = as_names_file
-        self._binary = binary
-        self._records = self.radix.load_ipasndb(ip_asn_db_file, binary=binary)
+        if ipasn_file.endswith(".gz"):
+            # Support for compressed IPASN files added 2017-01-05
+            with gzip.open(ipasn_file, 'rt') as f:
+                ipasn_str = f.read()
+            # performance note: ipasn_str = subprocess.check_output(['gunzip', '-c', ip_asn_file])
+            # is faster, but less portable, hence our choice. we could do hybrid.
+            self._records = self.radix.load_ipasndb("", ipasn_str)
+        else:
+            self._records = self.radix.load_ipasndb(ipasn_file, "")
         self._asnames = self._read_asnames() if as_names_file else None
         self._as_prefixes = None
 
     def _read_asnames(self):
         """
-        Under Construction, Do not use!\n
-        reads autonomous system names, if present from both the text and  binary db formats
+        Reads autonomous system names (warning: this method is not fully tested)
         """
         # todo: test a variety of formats for fastest performance in loading & disc size
-        #           - a text file with ASN & AS-NAMES
+        #           - json or csv-file with ASN & AS-NAMES
         #           - gzip of above
-        #           - "anydbm"
-        #           -  even pickle & compress
-        # todo: how should the as-names file be stored for binary format? (one implementation already in pyhelper for this)
+        #           - "anydbm" or pickle
         if self._asnames_file.endswith('.json'):
             with codecs.open(self._asnames_file, 'r', encoding='utf-8') as fs:
                 names = json.load(fs)
@@ -83,7 +84,7 @@ class pyasn(object):
                     raise Exception("Autonomous system names file contains non-nummeric ASNs")
                 return formatted_names
         else:
-            ext = os.path.splitext(self._asnames_file)[-1]
+            ext = path.splitext(self._asnames_file)[-1]
             raise Exception('Autonomous system names parser does not support %s format.' % ext)
 
     def lookup(self, ip_address):
@@ -107,27 +108,28 @@ class pyasn(object):
             for px in self.radix.prefixes():
                 ip, mask = px.split('/')  # fine with IPv4/IPv6
                 rn = self.radix.search_exact(ip, masklen=int(mask))
-                # we walk the radix-tree by going through all prefixes. it is very important to use search-exact
-                # in the process, with the correct mask, (to avoid bug #10)
+                # we walk the radix-tree by going through all prefixes. it is very important to
+                # use 'search-exact' in the process, with the correct mask (to avoid bug #10)
                 self._as_prefixes[rn.asn].add(px)
         #
         return self._as_prefixes[int(asn)] if int(asn) in self._as_prefixes else None
 
     def get_as_prefixes_effective(self, asn):
         """
-        Returns the effective address space of given ASN by removing all overlaps among the prefixes
-        :return: The effective prefixes resulting from removing overlaps of the given ASN's prefixes
+        Returns the effective address space of given ASN by removing all overlaps among prefixes
+        :return: The effective prefixes resulting from removing overlaps of given ASN's prefixes
         """
         prefixes = self.get_as_prefixes(asn)
         if not prefixes:  # issue 12
             return None
-        non_overlapping_prefixes4 = collapse_addresses([ip_network(i) for i in prefixes if ':' not in i])
-        non_overlapping_prefixes6 = collapse_addresses([ip_network(i) for i in prefixes if ':' in i])
-        return [i.compressed for i in non_overlapping_prefixes4] + [i.compressed for i in non_overlapping_prefixes6]
+        non_overlapping_4 = collapse_addresses([ip_network(i) for i in prefixes if ':' not in i])
+        non_overlapping_6 = collapse_addresses([ip_network(i) for i in prefixes if ':' in i])
+        return [i.compressed for i in non_overlapping_4] + \
+               [i.compressed for i in non_overlapping_6]
 
     def get_as_size(self, asn):
         """
-        Returns the size of an AS as the total number of IP addresses that the AS is responsible for.
+        Returns the size of an AS as the total count of IP addresses that the AS is responsible for
         :param asn: The autonomous system number
         :return: number of unique IP addresses routed by AS
         """
@@ -148,11 +150,13 @@ class pyasn(object):
         return self._asnames.get(asn, None)
 
     def __repr__(self):
-        return "pyasn(ipasndb:'%s'; asnames:'%s') - %d prefixes" % (self._ipasndb_file, self._asnames_file, self._records)
-
+        ret = "pyasn(ipasndb:'%s'; asnames:'%s') - %d prefixes" % (self._ipasndb_file,
+                                                                   self._asnames_file,
+                                                                   self._records)
+        return ret
 
     # Persistence support, for use with pickle.dump(), pickle.load()
-    # todo: test persistence support.  (also persist/reload _asnames and other members, if not done automatically)
+    # todo: test persistence support. (also persist/reload _asnames and other members, if needed)
     def __iter__(self):
         for elt in self.radix:
             yield elt
@@ -169,7 +173,7 @@ class pyasn(object):
         return Radix, (), self.__getstate__()
 
     @staticmethod
-    def convert_32bit_to_asdot_asn_format(asn):
+    def convert_32bit_to_asdot_asn_format(asn):  # FIXME: simplify to 'convert_32bit_asn_to_asdot'
         """
         Converts a 32bit AS number into the ASDOT format AS[Number].[Number] - see rfc5396.\n
         :param asn: The number of an AS in numerical format.
@@ -188,7 +192,8 @@ class pyasn(object):
         pattern = re.compile("^[AS]|[as]|[aS]|[As]][0-9]*(\.)?[0-9]+")
         match = pattern.match(asdot)
         if not match:
-            raise ValueError("Invalid asdot format for input. input format must be something like AS<Number> or AS<Number>.<Number> ")
+            raise ValueError("Invalid asdot format for input. input format must be something like"
+                             " AS<Number> or AS<Number>.<Number> ")
         if asdot.find(".") > 0:  # asdot input is of the format AS[d+].<d+> for example AS1.234
             s1, s2 = asdot.split(".")
             i1 = int(s1[2:])
