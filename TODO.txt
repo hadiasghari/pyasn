@@ -1,38 +1,21 @@
-
-2014-09-15
+2017-01-05
 ==========
+BACKLOG -- for getting out of beta:
+- Issue #25: finalizing license issues questions the radix file.
 
+BACKLOG -- other issues:
+- Issue #37: making sure we chose the correct origin-AS for a prefix with multiple AS-paths.
+  This issue also relates to differences among MRT/RIB dumps from multiple vantage points
+  (e.g. RouteViews, RIPE RIS,Cymru).
+- Issue #20: Releasing packages for various platforms (under way thanks to sebix).
 
-
-BACKLOG - for NEXT RELEASES
-FOR RC STATUS:
-* implement as name lookup
-* test binary ipasn db load and usage
-* understand difference with cymru whois lookup
-    * the difference is not solved by MRTX fixes.
-    * test with RIPE RIS (http://www.ripe.net/data-tools/stats/ris/ris-raw-data) -- different views most likely cause
-    * understand nature of multiple entries in MRT-records. we use only first.
-      (actually all have same origin in TD1 test, so this shouldn't be it either)
-    * in some instances, the difference was due to BOGON ASes. but none of these are actually in the test cases
-    * CHECK ISSUE #16 for some ideas
-
-* test for windows (done - tested with vs2010 + python3.4 / miniconda3, via pip and direct)
-* ipv6 support: (done - tested with updates in mrtx, radix, lookups, tests)
-		- tests on Windows left
-* combine pyasn-util-* scripts into one script with good argument parsing
-* perhaps, profiling pyasn.mrtx code
-* perhaps, speed issues with .get_as_prefixes_effective()
-
-OTHER:
-* upload our own asndb files to 3TU Datacenter (DONE -- but not needs update)
-    - this can be done after recreation of current IPASNDAT files (bogus & set routes changed - about 200/file)
-    - and perhaps also binary format check.
-
-* installer: cleanup not working? what is our "coverage" ?
-
-
-programatically accessing cymru whois if useful (- although we have our own funciton):
-       https://github.com/csirtfoundry/BulkWhois
-       https://github.com/trolldbois/python-cymru-services
-       https://github.com/JustinAzoff/python-cymruwhois
-
+DONE -- thanks to all contributers:
+- IPV6 support added and fully tested.
+- Added simple AS-name lookup (-- can be extended).
+- Better argument parsing in pyasn-util-* scripts.
+- Support loading of gzipped IPASN files -- in place of the binary format.
+- Added Travis support (-- we can add more tests for better "coverage").
+- Users tested conversion of other MRT/RIB archives, e.g. RIPE RIS.
+- Windows testing: IPASN lookup fully works, but conversion scripts fail for IPV6 (see mrtx.py)
+  (Tested with vs2010 on python3.4/miniconda3, via pip or source)
+- Upload our own asndb files to 3TU Datacenter (-- these need updating but no request yet).
