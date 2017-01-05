@@ -1,4 +1,4 @@
-# Copyright (c) 2009-2016 Hadi Asghari
+# Copyright (c) 2014-2017 Hadi Asghari
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -22,6 +22,7 @@ from __future__ import print_function, division
 from unittest import TestCase
 from pyasn.mrtx import *
 from bz2 import BZ2File
+import gzip
 from os import path
 import logging
 
@@ -35,8 +36,8 @@ RIB_TD2_FULLDUMP = path.join(path.dirname(__file__), "../data/rib.20140513.0600.
 RIB_TD1_WIDE_FULLDUMP = path.join(path.dirname(__file__), "../data/rib_rvwide.20040701.0000.bz2")
 RIB_TD2_REPEATED_FAIL_FULLDUMP = path.join(path.dirname(__file__), "../data/rib.20170102.1400.bz2")
 RIB6_TD2_FULLDUMP = path.join(path.dirname(__file__), "../data/rib6.20151101.0600.bz2")
-IPASN_TD1_DB = path.join(path.dirname(__file__), "../data/ipasn_20080501_v12.dat")
-IPASN_TD2_DB = path.join(path.dirname(__file__), "../data/ipasn_20140513_v12.dat")
+IPASN_TD1_DB = path.join(path.dirname(__file__), "../data/ipasn_20080501_v12.dat.gz")
+IPASN_TD2_DB = path.join(path.dirname(__file__), "../data/ipasn_20140513_v12.dat.gz")
 TEMP_IPASNDAT = path.join(path.dirname(__file__), "ipasn_test.tmp")
 
 
@@ -226,10 +227,11 @@ class TestMrtx(TestCase):
 
         print("starting conversion of", full_ribdump_path.split('/')[-1], file=stderr)
         converted = parse_mrt_file(full_ribdump_path, print_progress=True)
+        v6 = sum(1 for x in converted if ':' in x)
+        print("  Converted %d IPV4 + %d IPV6 prefixes." % (len(converted) - v6, v6), file=stderr)
 
         if not ipasn_db_path:
-            print("No exceptions in conversion. Nothing more to compare with.", file=stderr)
-            return
+            return  # nothing more to compare!
 
         # test of write-output
         dump_prefixes_to_text_file(converted,
@@ -240,7 +242,8 @@ class TestMrtx(TestCase):
         # tests of comparing with v 1.2 (existing conversion): load it, then compare
         # an alternative option is to run a linux DIFF comppand between TMEP_IPASNDAT & IPASN_DB
         ipasndat_v12 = {}
-        with open(ipasn_db_path, 'rt') as f:
+        assert ipasn_db_path.endswith(".gz")
+        with gzip.open(ipasn_db_path, "rt") as f:
             for s in f:
                 if s[0] == '#' or s[0] == '\n' or s[0] == ';':
                     continue
