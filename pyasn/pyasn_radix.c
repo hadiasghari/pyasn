@@ -653,13 +653,13 @@ Radix_load_ipasndb(RadixObject *self, PyObject *args, PyObject *kw_args)
 
     if (use_file)
     {
+	char buf[512], *p1, *p2;    
         // Construct radix-tree from file
         if ((ccfd = fopen(from_file, "rt" )) == NULL) {
             PyErr_SetString(PyExc_IOError, "Could not open the file.");
             return NULL;
         }
 
-        char buf[512], *p1, *p2;
         while (fgets(buf, 512, ccfd) != NULL)  {
 
             if (buf[0] == ';' || buf[0] == '#' || buf[0] == '\n' || buf[0] == 0)
