@@ -232,7 +232,7 @@ class TestSimple(TestCase):
         with open(FAKE_IPASN_DB_PATH, "rt") as f:
             ipasn_str = f.read()
         self.assertEqual(len(ipasn_str.splitlines()), 12)  # fake data has 12 lines
-        n = pyasn(None, ipasn_string=ipasn_str)  # note that pyasn_radix is *internal* & not directly used
+        n = pyasn(None, ipasn_string=ipasn_str)
 
         # now test the correctness
         for i in range(4):
