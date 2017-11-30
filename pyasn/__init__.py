@@ -69,9 +69,10 @@ class pyasn(object):
             self._records = self.radix.load_ipasndb("", ipasn_str)
         elif ipasn_file is not None:
             self._records = self.radix.load_ipasndb(ipasn_file, "")
-        else:
-            assert ipasn_string is not None
+        elif ipasn_string is not None:
             self._records = self.radix.load_ipasndb("", ipasn_string)
+        else:
+            raise ValueError("No data given, all parameters are empty.")
         self._asnames = self._read_asnames() if as_names_file else None
         self._as_prefixes = None
 
