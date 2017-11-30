@@ -189,9 +189,9 @@ class TestSimple(TestCase):
         size = self.asndb.get_as_size(1124)  # UVA AS has 3 non-overlapping prefixes (2 /16, 1 /17)
         self.assertEqual(size, 163840)       # Double checked with RIPE stat.
 
-    def test_init_from_string(self):
+    def test_radix_init_from_string(self):
         """
-            Test pyasn initialization from in memory string
+            Test radix initialization from in memory string
         """
         with open(FAKE_IPASN_DB_PATH, "rt") as f:
             ipasn_str = f.read()
@@ -203,6 +203,40 @@ class TestSimple(TestCase):
         # now test the correctness
         for i in range(4):
             asn, prefix = self.asndb_fake.lookup("1.0.0.%d" % i)
+            self.assertEqual(1, asn)
+            self.assertEqual("1.0.0.0/30", prefix)
+        for i in range(4, 256):
+            asn, prefix = self.asndb_fake.lookup("1.0.0.%d" % i)
+            self.assertEqual(2, asn)
+            self.assertEqual("1.0.0.0/24", prefix)
+        for i in range(256):
+            asn, prefix = self.asndb_fake.lookup("2.0.0.%d" % i)
+            self.assertEqual(3, asn)
+            self.assertEqual("2.0.0.0/24", prefix)
+        for i in range(128, 256):
+            asn, prefix = self.asndb_fake.lookup("3.%d.0.0" % i)
+            self.assertEqual(4, asn)
+            self.assertEqual("3.0.0.0/8", prefix)
+        for i in range(0, 128):
+            asn, prefix = self.asndb_fake.lookup("3.%d.0.0" % i)
+            self.assertEqual(5, asn)
+            self.assertEqual("3.0.0.0/9", prefix)
+        asn, prefix = self.asndb_fake.lookup("5.0.0.0")
+        self.assertEqual(None, asn)
+        self.assertEqual(None, prefix)
+
+    def test_pyasn_from_string(self):
+        """
+        Test pyasn initialization from in memory string
+        """
+        with open(FAKE_IPASN_DB_PATH, "rt") as f:
+            ipasn_str = f.read()
+        self.assertEqual(len(ipasn_str.splitlines()), 12)  # fake data has 12 lines
+        n = pyasn(None, ipasn_string=ipasn_str)  # note that pyasn_radix is *internal* & not directly used
+
+        # now test the correctness
+        for i in range(4):
+            asn, prefix = n.lookup("1.0.0.%d" % i)
             self.assertEqual(1, asn)
             self.assertEqual("1.0.0.0/30", prefix)
         for i in range(4, 256):
