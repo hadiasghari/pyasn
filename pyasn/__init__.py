@@ -38,7 +38,7 @@ class pyasn(object):
     Class to do fast offline & historical Autonomous-System-Number lookups for IPv4/IPv6 addresses.
     """
 
-    def __init__(self, ipasn_file, as_names_file=None):
+    def __init__(self, ipasn_file, as_names_file=None, ipasn_string=None):
         """
         Creates a new instance of pyasn.\n
         :param ipasn_file:
@@ -49,13 +49,17 @@ class pyasn(object):
              prebuilt database from the pyasn homepage.)
         :param as_names_file:
             if given, loads autonomous system names from this file (warning: not fully tested)
+        :param ipasn_string:
+            String containing an IP-ASN database to load.
+            Only used if ipasn_file is None.
+            (The database is in the same format as ipasn_file.)
         """
         self.radix = Radix()
         # we use functionality provided by the underlying RADIX class (implemented in C for speed)
         # actions such as add/delete node can be run on the radix tree if needed -- why its exposed
         self._ipasndb_file = ipasn_file
         self._asnames_file = as_names_file
-        if ipasn_file.endswith(".gz"):
+        if ipasn_file is not None and ipasn_file.endswith(".gz"):
             # Support for compressed IPASN files added 2017-01-05
             f = gzip.open(ipasn_file, 'rt')  # Py2.6 doesn't support 'with' for gzip
             ipasn_str = f.read()
@@ -63,8 +67,12 @@ class pyasn(object):
             # performance note: ipasn_str = subprocess.check_output(['gunzip', '-c', ip_asn_file])
             # is faster, but less portable, hence our choice. we could do hybrid.
             self._records = self.radix.load_ipasndb("", ipasn_str)
-        else:
+        elif ipasn_file is not None:
             self._records = self.radix.load_ipasndb(ipasn_file, "")
+        elif ipasn_string is not None:
+            self._records = self.radix.load_ipasndb("", ipasn_string)
+        else:
+            raise ValueError("No data given, all parameters are empty.")
         self._asnames = self._read_asnames() if as_names_file else None
         self._as_prefixes = None
 
