@@ -230,7 +230,7 @@ def is_asn_bogus(asn):
     #       WHOIS: https://github.com/rfc1036/whois   -- in the program source
     #       CIDR-Report: http://www.cidr-report.org/as2.0/reserved-ases.html
     # Note that the full list of unallocated and bogus ASNs is long, and changes; we use the basic
-    if asn == 0:
+    if asn <= 0:
         return True
     if 64496 <= asn <= 131071 or asn >= 4200000000:   # reserved & private-use-AS
         return True
