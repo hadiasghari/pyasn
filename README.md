@@ -1,10 +1,10 @@
 pyasn
 =====
 
-.. image:: https://pypip.in/v/pyasn/badge.png
+.. image:: https://img.shields.io/pypi/v/pyasn.svg
    :target: https://pypi.python.org/pypi/pyasn
 
-.. image:: https://pypip.in/d/pyasn/badge.png
+.. image:: https://img.shields.io/pypi/dm/pyasn.svg
    :target: https://pypi.python.org/pypi/pyasn
 
 
