@@ -2,10 +2,10 @@ pyasn
 =====
 
 .. image:: https://pypip.in/v/pyasn/badge.png
-   :target: https://pypi.python.org/pypi/pyasn
+   :target: https://pypi.org/project/pyasn/
 
 .. image:: https://pypip.in/d/pyasn/badge.png
-   :target: https://pypi.python.org/pypi/pyasn
+   :target: https://pypi.org/project/pyasn/
 
 
 **pyasn** is a Python extension module that enables very fast IP address to Autonomous System Number lookups.
