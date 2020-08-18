@@ -27,7 +27,7 @@ Installation
 ============
 Installation is a breeze via pip: ::
 
-    pip install pyasn --pre
+    pip install pyasn
 
 Or with the standard Python: ::
 
@@ -145,7 +145,7 @@ run with the following command: ::
 
     python setup.py test
 
-This beta release has been tested under python version 2.6, 2.7, 3.3, 3.4 and 3.5. We appreciate contributions towards
+This beta release has been tested under python version 2.6, 2.7, and 3.3 to 3.8. We appreciate contributions towards
 testing *pyasn*!
 
 **New in v1.6:** pyasn_util_convert.py offers a '--dump-screen' option which shows the MRT/RIB archive contents and
