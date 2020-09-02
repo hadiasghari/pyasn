@@ -84,7 +84,7 @@ like this: ::
 IPASN data files can be created by downloading MRT/RIB BGP archives from Routeviews (or similar sources),
 and parsing them using provided scripts that tail the BGP AS-Path. This can be done simply as follows: ::
 
-    pyasn_util_download.py --latest
+    pyasn_util_download.py --latest  # or --latestv46 
     pyasn_util_convert.py --single <Downloaded RIB File> <ipasn_db_file_name>
 
 
@@ -94,7 +94,7 @@ to the folder in which they have been copied (e.g. ``~/.local/bin``).
 
 We also provide download links to a large number of previously generated IPASN data files. These are based on
 weekly  snapshots of the Routeviews data from 2005-2015, accessible here:
-http://data.3tu.nl/repository/uuid:d4d23b8e-2077-4592-8b47-cb476ad16e12
+https://www.narcis.nl/dataset/RecordID/uuid:d4d23b8e-2077-4592-8b47-cb476ad16e12
 
 **New in v1.6:** To save disk space, you can gzip IPASN data files. The load time will be slighlty longer.
 
