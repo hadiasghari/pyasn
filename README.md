@@ -94,7 +94,7 @@ to the folder in which they have been copied (e.g. ``~/.local/bin``).
 
 We also provide download links to a large number of previously generated IPASN data files. These are based on
 weekly  snapshots of the Routeviews data from 2005-2015, accessible here:
-https://www.narcis.nl/dataset/RecordID/uuid:d4d23b8e-2077-4592-8b47-cb476ad16e12
+https://doi.org/10.4121/uuid:d4d23b8e-2077-4592-8b47-cb476ad16e12
 
 **New in v1.6:** To save disk space, you can gzip IPASN data files. The load time will be slighlty longer.
 
