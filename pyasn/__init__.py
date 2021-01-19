@@ -18,15 +18,19 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 from __future__ import print_function, division
-from .pyasn_radix import Radix
-from ._version import __version__
-from os import path
+
 import codecs
-from ipaddress import collapse_addresses, ip_network
-from collections import defaultdict
 import gzip
-from sys import version_info
+import pickle
 import re
+from collections import defaultdict
+from os import path
+
+from ipaddress import collapse_addresses, ip_network
+
+from ._version import __version__
+from .pyasn_radix import Radix
+
 try:
     import ujson as json
 except ImportError:
@@ -83,18 +87,37 @@ class pyasn(object):
         # todo: test a variety of formats for fastest performance in loading & disc size
         #           - json or csv-file with ASN & AS-NAMES
         #           - gzip of above
-        #           - "anydbm" or pickle
-        if self._asnames_file.endswith('.json'):
+        #           - "anydbm" or pickle (pickle gets a bit ugly with unicode)
+        if self._asnames_file.endswith('.gz'):
+            f = gzip.open(self._asnames_file, 'rt')  # Py2.6 doesn't support 'with' for gzip
+            raw_data = f.read()
+            f.close()
+
+            asnames_file = self._asnames_file.strip('.gz')
+            ftype = asnames_file.split('.')[-1]
+
+            if ftype not in ['json']:
+                # Easy to add + validate new extension-checks
+                raise ValueError("Invalid filetype under the commpressed as-names file: {}; must be:  "
+                              "['.json']")
+
+            if ftype == 'json':
+                names = json.loads(raw_data)
+
+        elif self._asnames_file.endswith('.json'):
             with codecs.open(self._asnames_file, 'r', encoding='utf-8') as fs:
                 names = json.load(fs)
-                try:
-                    formatted_names = dict([(int(k), v) for k, v in names.items()])
-                except ValueError:
-                    raise Exception("Autonomous system names file contains non-nummeric ASNs")
-                return formatted_names
+
         else:
             ext = path.splitext(self._asnames_file)[-1]
-            raise Exception('Autonomous system names parser does not support %s format.' % ext)
+            raise NotImplementedError('Autonomous system names parser does not support %s format.' % ext)
+
+        try:
+            formatted_names = dict([(int(k), v) for k, v in names.items()])
+        except ValueError:
+            raise Exception("Autonomous system names file contains non-nummeric ASNs")
+
+        return formatted_names
 
     def lookup(self, ip_address):
         """

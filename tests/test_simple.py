@@ -17,17 +17,21 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
-from unittest import TestCase
-from pyasn import pyasn, pyasn_radix
-import os
+import codecs
+import json
 import logging
-from sys import stderr
+import os
+import pickle
+from unittest import TestCase
+
+from pyasn import pyasn, pyasn_radix
 
 FAKE_IPASN_DB_PATH = os.path.join(os.path.dirname(__file__), "../data/ipasn.fake")
 IPASN_DB_PATH = os.path.join(os.path.dirname(__file__), "../data/ipasn_20140513.dat.gz")
 IPASN6_DB_PATH = os.path.join(os.path.dirname(__file__), "../data/ipasn6_20151101.dat.gz")
 AS_NAMES_FILE_PATH = os.path.join(os.path.dirname(__file__), "../data/asnames.json")
+AS_NAMES_COMPRESSED_FILE_PATH = os.path.join(os.path.dirname(__file__), "../data/asnames.json.gz")
+# AS_NAMES__FILE_PATH = os.path.join(os.path.dirname(__file__), "../data/asnames.json.gz")
 logger = logging.getLogger()
 
 
@@ -166,6 +170,18 @@ class TestSimple(TestCase):
             Test functionality of AS Name Lookup.
         """
         db_with_names = pyasn(IPASN_DB_PATH, as_names_file=AS_NAMES_FILE_PATH)
+        asn, prefix = db_with_names.lookup('8.8.8.8')
+        name = db_with_names.get_as_name(asn)
+        self.assertTrue(name.lower().find("google") >= 0, "ASN Name Incorrect! Should be Google")
+
+        name = db_with_names.get_as_name(-1)
+        self.assertTrue(name is None, "ASN Name Incorrect! Should be None")
+
+    def test_asnames_compressed(self):
+        """
+            Test functionality of AS Name Lookup with compressed files
+        """
+        db_with_names = pyasn(IPASN_DB_PATH, as_names_file=AS_NAMES_COMPRESSED_FILE_PATH)
         asn, prefix = db_with_names.lookup('8.8.8.8')
         name = db_with_names.get_as_name(asn)
         self.assertTrue(name.lower().find("google") >= 0, "ASN Name Incorrect! Should be Google")
