@@ -165,21 +165,28 @@ class pyasn(object):
         return ret
 
     # Persistence support, for use with pickle.dump(), pickle.load()
-    # todo: test persistence support. (also persist/reload _asnames and other members, if needed)
+    # todo: add a test also for persistence support
     def __iter__(self):
         for elt in self.radix:
             yield elt
 
     def __getstate__(self):
-        return [(elt.prefix, elt.asn) for elt in self]
+        d = self.__dict__.copy()
+        del d['radix']
+        s = ""
+        for elt in self:
+            s += "{}\t{}\n".format(elt.prefix, elt.asn)
+        d["ipasn_str"] = s
+        return d
 
     def __setstate__(self, state):
-        for prefix, asn in state:
-            node = self.radix.add(prefix)
-            node.asn = asn
+        ipasn_str = state['ipasn_str']
+        del state['ipasn_str']
+        self.__dict__.update(state)
+        self.radix = Radix()
+        records = self.radix.load_ipasndb("", ipasn_str)
+        assert records == self._records  # sanity
 
-    def __reduce__(self):
-        return Radix, (), self.__getstate__()
 
     @staticmethod
     def convert_32bit_to_asdot_asn_format(asn):  # FIXME: simplify to 'convert_32bit_asn_to_asdot'
