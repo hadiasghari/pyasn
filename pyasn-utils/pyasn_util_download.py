@@ -51,6 +51,7 @@ group.add_argument('--latestv46', '-46', action='store_true', help='Grab lastest
 group.add_argument('--version', action='store_true')
 group.add_argument('--dates-from-file', '-f', action='store',
                    help='Grab IPV4 archives for specifc dates (one date, YYYYMMDD, per line)')
+parser.add_argument('--filename', action='store', help="Specify name with which the file will be saved")
 args = parser.parse_args()
 
 
@@ -62,8 +63,10 @@ def ftp_download(server, remote_dir, remote_file, local_file, print_progress=Tru
     if print_progress:
         print('Downloading ftp://%s/%s/%s' % (server, remote_dir, remote_file))
     filesize = ftp.size(remote_file)
+
+    filename = args.filename if args.filename is not None else local_file
     # perhaps warn before overwriting file?
-    with open(local_file, 'wb') as fp:
+    with open(filename, 'wb') as fp:
         def recv(s):
             fp.write(s)
             recv.chunk += 1
