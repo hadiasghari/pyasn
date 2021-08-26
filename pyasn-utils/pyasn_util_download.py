@@ -171,10 +171,10 @@ if args.dates_from_file:
         url_full = url_dir + fname
         print('downloading...', end=' ')
         stdout.flush()
-        # FIXME: Why using urllib AND wget? Can urllib do listing AND downloading? (OR ftp...)
-        ret = call(['wget', '-q', url_full])  # wget in quiet mode
-        print()
-        ret = "" if ret == 0 else "[FAIL:%d]" % ret
+        resp = urlopen(url_full)
+        with open(fname, 'wb') as fout:
+            for line in resp:
+                fout.write(line)
 
-        print('%s\t%s\t%s\t%s' % (dt, size, url_full, ret))
+        print('%s\t%s\t%s' % (dt, size, url_full))
         stdout.flush()
