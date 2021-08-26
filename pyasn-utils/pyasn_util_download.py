@@ -67,8 +67,10 @@ def ftp_download(server, remote_dir, remote_file, local_file, print_progress=Tru
     if print_progress:
         print('Downloading ftp://%s/%s/%s' % (server, remote_dir, remote_file))
     filesize = ftp.size(remote_file)
+
+    filename = args.filename if args.filename is not None else local_file
     # perhaps warn before overwriting file?
-    with open(local_file, 'wb') as fp:
+    with open(filename, 'wb') as fp:
         def recv(s):
             fp.write(s)
             recv.chunk += 1
