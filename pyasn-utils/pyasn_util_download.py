@@ -24,12 +24,14 @@
 # Thanks to Vitaly Khamin (https://github.com/khamin) for the FTP code
 
 from __future__ import print_function, division
-from datetime import date, datetime
-from time import time
-from ftplib import FTP
+
+import re
 from argparse import ArgumentParser
-from subprocess import call
-from sys import argv, exit, stdout, version_info
+from datetime import date, datetime
+from ftplib import FTP
+from sys import exit, stdout, version_info
+from time import time
+
 try:
     from pyasn import __version__
 except:
