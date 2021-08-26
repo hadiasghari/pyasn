@@ -53,6 +53,9 @@ group.add_argument('--latestv46', '-46', action='store_true', help='Grab lastest
 group.add_argument('--version', action='store_true')
 group.add_argument('--dates-from-file', '-f', action='store',
                    help='Grab IPV4 archives for specifc dates (one date, YYYYMMDD, per line)')
+parser.add_argument('--filename', action='store', help="Specify name with which the file will be saved")
+parser.add_argument('--download_http', action='store_true', help="downloads via HTTP instead of FTP.  Only supports"
+                                                                "IPv4")
 args = parser.parse_args()
 
 
@@ -118,11 +121,67 @@ def find_latest_routeviews(archive_ipv):
                               sub_dir='RIBS')
 
 
+def download_http(local_filename=None):
+    """
+    In some cases FTP connections are blocked by firewalls, so we provide an HTTP alternative.  However, the FTP
+    method remains the preferred download method
+    """
+    latest_rib_filename, latest_rib_url = find_latest_in_http()
+    outfname = latest_rib_filename if not local_filename else local_filename
+    print("Downloading latest IPv4 ribfile via HTTP from {}".format(latest_rib_url))
+
+    try:
+        fetched_rib = urlopen(latest_rib_url)
+    except Exception:
+        msg = 'Problem fetching URL: {}'.format(latest_rib_url)
+        print(msg)
+        raise
+
+    with open(outfname, 'wb') as fout:
+        for line in fetched_rib:
+            fout.write(line)
+    print('Wrote downloaded ribfile to {}'.format(outfname))
+
+
+def find_latest_in_http():
+    today_year = datetime.now().year
+    today_month = datetime.now().month
+    if today_month < 10:
+        # Format as MM
+        today_month = "0" + str(today_month)
+
+    # Fetch the page of ribs to determine the lastest ribfile we can download
+    ribs_page_url = "http://archive.routeviews.org/bgpdata/{year}.{month}/RIBS/".format(year=today_year,
+                                                                                        month=today_month)
+    try:
+        webpage = urlopen(ribs_page_url)
+    except Exception:
+        msg = 'Problem fetching URL: {}'.format(ribs_page_url)
+        print(msg)
+        raise
+
+    txt = ''.join((str(line) for line in webpage))
+
+    # FWIW, there are ~4 versions available to download each day for each quarter of the day, we'll get the newest
+    p = re.compile(r'rib\.\d{8}\.\d{4}\.bz2')
+    ribs = p.findall(txt)
+
+    assert len(ribs), "No ribs found on site: {}".format(ribs_page_url)
+
+    latest_rib_filename = ribs[-1]
+
+    latest_rib_url = "http://archive.routeviews.org/bgpdata/{year}.{month}/RIBS/{rib_fname}".format(
+        year=today_year,
+        month=today_month,
+        rib_fname=latest_rib_filename)
+
+    return latest_rib_filename, latest_rib_url
+
+
 if args.version:
     print("MRT/RIB downloader version %s." % __version__)
 
-
-if args.latestv4 or args.latestv6 or args.latestv46:
+if (args.latestv4 or args.latestv6 or args.latestv46) and not args.download_http:
     # Download latest RouteViews MRT/RIB archive
     srvr, rp, fn = find_latest_routeviews(4 if args.latestv4 else 6 if args.latestv6 else '46')
     ftp_download(srvr, rp, fn, fn)
@@ -178,3 +237,7 @@ if args.dates_from_file:
 
         print('%s\t%s\t%s' % (dt, size, url_full))
         stdout.flush()
+
+if args.download_http:
+    assert args.latestv4, "Only IPv4 is supported in HTTP mode"
+    download_http(args.filename)
