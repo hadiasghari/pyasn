@@ -1,8 +1,7 @@
 pyasn
 =====
 
-.. image:: https://pypip.in/v/pyasn/badge.png
-   :target: https://pypi.org/project/pyasn/
+[![PyPI version](https://badge.fury.io/py/pyasn.svg)](https://badge.fury.io/py/pyasn)
 
 
 **pyasn** is a Python extension module that enables very fast IP address to Autonomous System Number lookups.
@@ -17,10 +16,10 @@ data structure for storage of IP addresses. In the current version, it borrows c
 both IPV4 and IPV6 network prefixes. The current release is a beta. Compared to the previous version, it provides
 support for Python 2 and 3; adds new functionality, performance improvements, and unit-tests.
 
-*pyasn* is developed and maintained by researchers at the Economics of Cybersecurity research group at Delft
-University of Technology (http://econsec.tbm.tudlft.nl). The package is used on an almost daily basis and bugs
-are fixed pretty quickly.  The package is largely developed and maintained by Hadi Asghari and Arman Noroozian.
-Please report any bugs via GitHub (https://github.com/hadiasghari/pyasn) or email the developers.
+*pyasn* was initially developed and maintained by researchers of the TU Delft’s Faculty of Technology, Policy and
+Management (TPM) Delft Cybersecurity group (https://www.tudelft.nl/tbm/cybersecurity). The package is used on an almost
+daily basis and bugs are fixed pretty quickly.  The package is largely developed and maintained by Hadi Asghari and
+Arman Noroozian. Please report any bugs via GitHub (https://github.com/hadiasghari/pyasn) or email the developers.
 
 
 Installation
