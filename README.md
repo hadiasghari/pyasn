@@ -104,7 +104,9 @@ You can remove *pyasn* as follows: ::
 
     pip3 uninstall pyasn
 
-If you built and installed the package your self use the recorded log to remove the installed files.
+
+If this command generates an error, update your `pip` package to the latest version first.
+
 
 
 Package Structure
