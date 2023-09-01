@@ -13,37 +13,34 @@ This makes *pyasn* much faster than online dig/whois/json lookups.
 
 The module is written in C and Python, and cross-compiles on Linux and Windows. Underneath, it uses a radix tree
 data structure for storage of IP addresses. In the current version, it borrows code from *py-radix* to support
-both IPV4 and IPV6 network prefixes. The current release is a beta. Compared to the previous version, it provides
+both IPV4 and IPV6 network prefixes. Compared to the previous version, it provides
 support for Python 2 and 3; adds new functionality, performance improvements, and unit-tests.
 
-*pyasn* was initially developed and maintained by researchers of the TU Delft’s Faculty of Technology, Policy and
-Management (TPM) Delft Cybersecurity group (https://www.tudelft.nl/tbm/cybersecurity). The package is used on an almost
-daily basis and bugs are fixed pretty quickly.  The package is largely developed and maintained by Hadi Asghari and
-Arman Noroozian. Please report any bugs via GitHub (https://github.com/hadiasghari/pyasn) or email the developers.
+*pyasn* has been developed by (Hadi Asghari)[https://hadiasghari.com] and
+(Arman Noroozian)[https://anoroozian.nl/] during their PhD research on cybersecurity measurements. The package is used widely and bugs are fixed quickly.  Please report any bugs via GitHub (https://github.com/hadiasghari/pyasn) issues.
 
 
 Installation
 ============
 Installation is a breeze via pip: ::
 
-    pip install pyasn
+    pip3 install pyasn
 
 Or with the standard Python: ::
 
-    python setup.py build
-    python setup.py install --record log
+    python3 setup.py build
+    python3 setup.py install --record log
 
 You will need to have pip, setuptools and build essentials installed if you build the package manually. On
 Ubuntu/Debian you can get them using the following command: ::
 
-    sudo apt-get install python-pip python-dev build-essential
+    sudo apt install python3-pip python3-dev python3-setuptools build-essential
 
 Building the C module on Windows, using either pip or from source, requires Microsoft Visual C++ to be installed.
 pyasn has been tested using Visual C++ Express 2010, available freely from Microsoft's website, on both the
 official Python 3.4 release and Miniconda3. Other versions of Python, Visual Studio, and Cygwin could also work
 with minor modifications.
 
-We plan to release *pyasn* packages to major Linux repositories once it is out of beta.
 
 
 Usage
@@ -109,12 +106,11 @@ Uninstalling pyasn
 ==================
 You can remove *pyasn* as follows: ::
 
-    pip uninstall pyasn
+    pip3 uninstall pyasn
 
 If you built and installed the package your self use the recorded log to remove the installed files.
 
-**Removing PyASN version 1.2**: *pyasn* v1.5/1.6 and v1.2 can be installed side by side (due to lower-cased package
-name). To avoid mistakes, you can uninstall the old **PyASN** by deleting the following files from your Python
+**Removing PyASN version 1.2**: You can uninstall the old **PyASN** package (note the different capitilization) by deleting the following files from your Python
 installation: ::
 
     PYTHONDIR/dist-packages/PyASN.so
@@ -139,13 +135,10 @@ The main portions of the directory tree are as follows: ::
 
 Testing pyasn Sources
 =====================
-A limited number of unit tests are provided in the ``tests/`` directory when downlading the sources. They can be
-run with the following command: ::
+A number of unit tests are provided in the ``tests/`` directory when downlading from source. The tests can be run using the `pytest` command (`pytest-3` in Ubuntu).  
 
-    python setup.py test
-
-This beta release has been tested under python version 2.6, 2.7, and 3.3 to 3.8. We appreciate contributions towards
-testing *pyasn*!
+This release has been tested under python version 2.6, 2.7, and 3.3 to 3.11. We appreciate contributions towards
+testing and extending *pyasn*!
 
 **New in v1.6:** pyasn_util_convert.py offers a '--dump-screen' option which shows the MRT/RIB archive contents and
 the chosen origin-AS.

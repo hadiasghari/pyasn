@@ -54,10 +54,12 @@ setup(
     data_files=[],
     scripts=utils,
     setup_requires=[],
-    tests_require=['nose', 'coverage'],
     packages=find_packages(exclude=['tests', 'tests.*']),
     zip_safe=False,
-    test_suite='nose.collector',
+    # 20230901 switch from nose to pytest for running the tests
+    # tests_require=['nose', 'coverage'],
+    # test_suite='nose.collector',
+    extras_require={'test': ['pytest'],},
     **extra_kwargs
 )
 
