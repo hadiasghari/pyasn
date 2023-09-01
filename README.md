@@ -16,8 +16,8 @@ data structure for storage of IP addresses. In the current version, it borrows c
 both IPV4 and IPV6 network prefixes. Compared to the previous version, it provides
 support for Python 2 and 3; adds new functionality, performance improvements, and unit-tests.
 
-*pyasn* has been developed by (Hadi Asghari)[https://hadiasghari.com] and
-(Arman Noroozian)[https://anoroozian.nl/] during their PhD research on cybersecurity measurements. The package is used widely and bugs are fixed quickly.  Please report any bugs via GitHub (https://github.com/hadiasghari/pyasn) issues.
+*pyasn* has been developed by [Hadi Asghari](https://hadiasghari.com) and
+[Arman Noroozian](https://anoroozian.nl/) during their PhD research on cybersecurity measurements. The package is used widely and bugs are fixed quickly.  Please report any bugs via GitHub [issues](https://github.com/hadiasghari/pyasn/issues).
 
 
 Installation
@@ -85,12 +85,8 @@ and parsing them using provided scripts that tail the BGP AS-Path. This can be d
 
 
 **NOTE:** These scripts are by default installed to ``/usr/local/bin`` and can be executed directly. If you installed
-the package to a user directory, these scripts will not be on the path and you will have to invoke them by navigating
-to the folder in which they have been copied (e.g. ``~/.local/bin``).
-
-We also provide download links to a large number of previously generated IPASN data files. These are based on
-weekly  snapshots of the Routeviews data from 2005-2015, accessible here:
-https://doi.org/10.4121/uuid:d4d23b8e-2077-4592-8b47-cb476ad16e12
+the package to a user directory (using `--user`), these scripts might not be on the path. In such a case invoke them from 
+the directory in which they have been copied (e.g. ``~/.local/bin``).
 
 **New in v1.6:** To save disk space, you can gzip IPASN data files. The load time will be slighlty longer.
 
@@ -109,12 +105,6 @@ You can remove *pyasn* as follows: ::
     pip3 uninstall pyasn
 
 If you built and installed the package your self use the recorded log to remove the installed files.
-
-**Removing PyASN version 1.2**: You can uninstall the old **PyASN** package (note the different capitilization) by deleting the following files from your Python
-installation: ::
-
-    PYTHONDIR/dist-packages/PyASN.so
-    PYTHONDIR/dist-packages/PyASN-1.2.egg-info
 
 
 Package Structure
@@ -139,9 +129,6 @@ A number of unit tests are provided in the ``tests/`` directory when downlading 
 
 This release has been tested under python version 2.6, 2.7, and 3.3 to 3.11. We appreciate contributions towards
 testing and extending *pyasn*!
-
-**New in v1.6:** pyasn_util_convert.py offers a '--dump-screen' option which shows the MRT/RIB archive contents and
-the chosen origin-AS.
 
 
 License & Acknowledgments
