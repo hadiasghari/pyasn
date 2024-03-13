@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 # Copyright (c) 2009-2017 Hadi Asghari
 #
@@ -23,13 +23,15 @@
 # Script to download the latest routeview bgpdata, or for a certain period
 # Thanks to Vitaly Khamin (https://github.com/khamin) for the FTP code
 
-from __future__ import print_function, division
-from datetime import date, datetime
-from time import time
-from ftplib import FTP
+from __future__ import division, print_function
+
+import re
 from argparse import ArgumentParser
-from subprocess import call
-from sys import argv, exit, stdout, version_info
+from datetime import date, datetime
+from ftplib import FTP
+from sys import exit, stdout, version_info
+from time import time
+
 try:
     from pyasn import __version__
 except:
@@ -52,6 +54,7 @@ group.add_argument('--version', action='store_true')
 group.add_argument('--dates-from-file', '-f', action='store',
                    help='Grab IPV4 archives for specifc dates (one date, YYYYMMDD, per line)')
 parser.add_argument('--filename', action='store', help="Specify name with which the file will be saved")
+parser.add_argument('--method', type=str, help="download method", choices=["ftp", "http"], default="http")
 args = parser.parse_args()
 
 
@@ -106,28 +109,96 @@ def find_latest_in_ftp(server, archive_root, sub_dir, print_progress=True):
     ftp.close()
     return (server, filepath, filename)
 
-
-def find_latest_routeviews(archive_ipv):
-    # RouteViews archives are as follows:
-    # ftp://archive.routeviews.org/datapath/YYYYMM/ribs/XXXX
+def get_archive_root(archive_ipv):
     archive_ipv = str(archive_ipv)
     assert archive_ipv in ('4', '6', '46', '64')
-    return find_latest_in_ftp(server='archive.routeviews.org',
-                              archive_root='bgpdata' if archive_ipv == '4' else
-                                           'route-views6/bgpdata' if archive_ipv == '6' else
-                                           'route-views4/bgpdata',  # 4+6
-                              sub_dir='RIBS')
+    return 'bgpdata' if archive_ipv == '4' else \
+           'route-views6/bgpdata' if archive_ipv == '6' else \
+           'route-views4/bgpdata'  # 4+6
+
+def find_latest_routeviews(archive_ipv, method="http"):
+    # RouteViews archives are as follows:
+    # ftp://archive.routeviews.org/datapath/YYYYMM/ribs/XXXX
+    kwargs = {
+        "server": "archive.routeviews.org",
+        "archive_root": get_archive_root(archive_ipv),
+        "sub_dir": "RIBS"
+    }
+    if method == "ftp":
+        return find_latest_in_ftp(**kwargs)
+    elif method == "http":
+        return find_latest_in_http(**kwargs)
+    else:
+        raise ValueError("Unknown download method: {}".format(method))
 
 
+def http_download(server, root_path, remote_filename, local_filename):
+    """Downloads the latest RIB file from RouteViews via HTTP(S)"""
+
+    remote_url = "https://{server}/{root_path}/{remote_filename}".format(
+        server=server,
+        root_path=root_path,
+        remote_filename=remote_filename)
+
+    print('Downloading %s' % remote_url)
+    resp = urlopen(remote_url)
+    with open(local_filename, 'wb') as fout:
+        for line in resp:
+            fout.write(line)
+
+    print('Download complete.')
+
+
+def find_latest_in_http(server, archive_root, sub_dir):
+    today_year = datetime.now().year
+    today_month = datetime.now().month
+    if today_month < 10:
+        # Format as MM
+        today_month = "0" + str(today_month)
+
+    # Fetch the page of ribs to determine the lastest ribfile we can download
+    ribs_page_url = "https://{server}/{archive_root}/{year}.{month}/{sub_dir}/".format(
+        server=server,
+        archive_root=archive_root,
+        year=today_year,
+        month=today_month,
+        sub_dir=sub_dir
+    )
+    try:
+        print('Fetching %s' % ribs_page_url)
+        webpage = urlopen(ribs_page_url)
+    except Exception:
+        msg = 'Problem fetching URL: {}'.format(ribs_page_url)
+        print(msg)
+        raise
+
+    txt = ''.join((str(line) for line in webpage))
+
+    # FWIW, there are ~4 versions available to download each day for each quarter of the day, we'll get the newest
+    p = re.compile(r'rib\.\d{8}\.\d{4}\.bz2')
+    ribs = p.findall(txt)
+
+    assert len(ribs), "No ribs found on site: {}".format(ribs_page_url)
+
+    latest_rib_filename = ribs[-1]
+
+    return (server, "{archive_root}/{today_year}.{today_month}/{sub_dir}".format(
+        archive_root=archive_root,
+        today_year=today_year,
+        today_month=today_month,
+        sub_dir=sub_dir), latest_rib_filename)
 if args.version:
     print("MRT/RIB downloader version %s." % __version__)
 
-
-if args.latestv4 or args.latestv6 or args.latestv46:
-    # Download latest RouteViews MRT/RIB archive
-    srvr, rp, fn = find_latest_routeviews(4 if args.latestv4 else 6 if args.latestv6 else '46')
-    ftp_download(srvr, rp, fn, fn)
-
+if (args.latestv4 or args.latestv6 or args.latestv46):
+    server, root_path, remote_filename = find_latest_routeviews(4 if args.latestv4 else 6 if args.latestv6 else '46', method=args.method)
+    local_filename = args.filename if args.filename else remote_filename
+    if args.method == "ftp":
+        ftp_download(server, root_path, remote_filename, local_filename)
+    elif args.method == "http":
+        http_download(server, root_path, remote_filename, local_filename)
+    else:
+        raise ValueError("Unknown download method: {}".format(args.method))
 
 if args.dates_from_file:
     # read dates from a local file and use wget to download range
@@ -144,7 +215,7 @@ if args.dates_from_file:
 
     for dt in dates_to_get:
         # FIXME: currently v4 only. should understand v4/v6 options, and possibly use FTP method
-        url_dir = 'http://archive.routeviews.org/bgpdata/%d.%02d/RIBS/' % (dt.year, dt.month)
+        url_dir = 'https://archive.routeviews.org/bgpdata/%d.%02d/RIBS/' % (dt.year, dt.month)
         print('Searching %s for %d-%02d-%02d...' % (url_dir, dt.year, dt.month, dt.day), end=' ')
         stdout.flush()
 
@@ -172,10 +243,10 @@ if args.dates_from_file:
         url_full = url_dir + fname
         print('downloading...', end=' ')
         stdout.flush()
-        # FIXME: Why using urllib AND wget? Can urllib do listing AND downloading? (OR ftp...)
-        ret = call(['wget', '-q', url_full])  # wget in quiet mode
-        print()
-        ret = "" if ret == 0 else "[FAIL:%d]" % ret
+        resp = urlopen(url_full)
+        with open(fname, 'wb') as fout:
+            for line in resp:
+                fout.write(line)
 
-        print('%s\t%s\t%s\t%s' % (dt, size, url_full, ret))
+        print('%s\t%s\t%s' % (dt, size, url_full))
         stdout.flush()
