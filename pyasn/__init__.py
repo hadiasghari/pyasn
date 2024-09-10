@@ -161,14 +161,26 @@ class pyasn(object):
 
     def get_as_size(self, asn):
         """
-        Returns the size of an AS as the total count of IP addresses that the AS is responsible for
+        Returns the size of an AS as the total count of IPv4 addresses that the AS is responsible for
         :param asn: The autonomous system number
-        :return: number of unique IP addresses routed by AS
+        :return: number of unique IPv4 addresses routed by AS
         """
         prefixes = self.get_as_prefixes_effective(asn)
         if not prefixes:
             return 0
-        size = sum([2 ** (32 - int(px.split('/')[1])) for px in prefixes])
+        size = sum([2 ** (32 - int(px.split('/')[1])) for px in prefixes if ':' not in px])
+        return size
+
+    def get_as_size_v6(self, asn):
+        """
+        Returns the size of an AS as the total count of IPv6 addresses that the AS is responsible for
+        :param asn: The autonomous system number
+        :return: number of unique IPv6 addresses routed by AS
+        """
+        prefixes = self.get_as_prefixes_effective(asn)
+        if not prefixes:
+            return 0
+        size = sum([2 ** (128 - int(px.split('/')[1])) for px in prefixes if ':' in px])
         return size
 
     def get_as_name(self, asn):
