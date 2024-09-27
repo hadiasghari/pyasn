@@ -240,7 +240,8 @@ class pyasn(object):
         :param asdot:  "AS[Number].[Number]" representation of an autonomous system
         :return: 32bit AS number
         """
-        pattern = re.compile("^[AS]|[as]|[aS]|[As]][0-9]*(\.)?[0-9]+")
+        pattern = re.compile(r"^[AS]|[as]|[aS]|[As]][0-9]*(\.)?[0-9]+")
+
         match = pattern.match(asdot)
         if not match:
             raise ValueError("Invalid asdot format for input. input format must be something like"
