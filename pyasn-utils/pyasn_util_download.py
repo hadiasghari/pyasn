@@ -113,7 +113,7 @@ def find_latest_routeviews(archive_ipv):
     archive_ipv = str(archive_ipv)
     assert archive_ipv in ('4', '6', '46', '64')
     return find_latest_in_ftp(server='archive.routeviews.org',
-                              archive_root='bgpdata' if archive_ipv == '4' else
+                              archive_root='route-views2/bgpdata' if archive_ipv == '4' else
                                            'route-views6/bgpdata' if archive_ipv == '6' else
                                            'route-views4/bgpdata',  # 4+6
                               sub_dir='RIBS')
